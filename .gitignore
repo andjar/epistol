@@ -1,0 +1,4 @@
+config/credentials.php
+db/database.sqlite
+vendor/
+storage/attachments/
