@@ -1,0 +1,14 @@
+{
+    "name": "epistol/epistol",
+    "description": "Your email, reimagined as a social feed.",
+    "type": "project",
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "authors": [
+        {
+            "name": "Your Name",
+            "email": "you@example.com"
+        }
+    ]
+}

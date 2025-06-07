@@ -26,6 +26,22 @@ This project is built with simplicity and accessibility in mind, using a classic
 -   **Database:** SQLite 3
 -   **Email Protocol:** IMAP for fetching emails, SMTP for sending.
 
+## Testing
+
+This project uses [PHPUnit](https://phpunit.de/) for unit testing.
+
+1.  **Install Dependencies:**
+    If you haven't already, install the project dependencies using Composer:
+    ```bash
+    composer install
+    ```
+
+2.  **Run Tests:**
+    To run the test suite, execute the following command from the project root:
+    ```bash
+    vendor/bin/phpunit
+    ```
+
 ## Project Architecture
 
 Epistol is composed of four primary components that work together:

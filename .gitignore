@@ -2,3 +2,6 @@ config/credentials.php
 db/database.sqlite
 vendor/
 storage/attachments/
+
+# Composer dependencies
+composer.lock
