@@ -49,6 +49,11 @@ function get_db_connection()
                     throw new Exception("Failed to read schema file from {$schema_path}");
                 }
                 $pdo->exec($schema);
+
+                // Inject initial data after schema creation
+                require_once __DIR__ . '/../db/inject_test_data.php';
+                inject_initial_data($pdo);
+
             } catch (Exception $e) {
                 // If schema creation fails, it's good to remove the potentially empty/partial db file
                 if (file_exists($db_path)) {
