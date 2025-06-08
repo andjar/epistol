@@ -123,9 +123,9 @@ if ((php_sapi_name() === 'cli' || php_sapi_name() === 'cgi-fcgi') && basename(__
     echo "Running inject_test_data.php directly from CLI...\n";
     try {
         // Establish a new PDO connection for standalone execution
-        $pdo = get_db_connection();
+        $pdo = get_db_connection(); 
         echo "Database connection successful for direct execution.\n";
-
+        
         // Call the main data injection function
         inject_initial_data($pdo);
 
