@@ -14,6 +14,7 @@
     </header>
     <main class="main-layout"> <!- Added a class for flexbox styling -->
         <aside id="groups-sidebar">
+            <button id="toggle-groups-sidebar-btn">Toggle Groups</button>
             <h2>Groups</h2>
             <div id="groups-list-container">
                 <!-- Groups will be loaded here -->
@@ -64,20 +65,6 @@
                     <button type="button" id="cancel-compose-btn">Cancel</button>
                 </div>
             </form>
-        </div>
-    </div>
-
-    <!-- Person Profile Modal -->
-    <div id="profile-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close-btn" id="close-profile-modal-btn">&times;</span>
-            <h2 id="profile-name"></h2>
-            <p>Email(s): <span id="profile-emails"></span></p>
-            <p>Notes: <span id="profile-notes"></span></p>
-            <h3>Associated Threads:</h3>
-            <div id="profile-threads-container">
-                <!-- Threads will be loaded here by JavaScript -->
-            </div>
         </div>
     </div>
 

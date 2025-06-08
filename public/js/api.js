@@ -1,23 +1,27 @@
 /**
  * Fetches the email feed data from the backend API.
- * @returns {Promise<Array<Object>>} A promise that resolves to an array of thread objects.
- *                                   Returns an empty array in case of an error.
+ * @param {object} [params={}] - Optional parameters for filtering the feed.
+ * @param {string|null} [params.groupId] - The ID of the group to filter by.
+ * @returns {Promise<Object>} A promise that resolves to the feed data (e.g., { threads: [...] }).
+ *                            Returns an empty object or throws an error in case of failure.
  */
-async function getFeed() {
+async function getFeed(params = {}) {
+    let url = '../api/get_feed.php';
+    if (params.groupId) {
+        url += `?group_id=${encodeURIComponent(params.groupId)}`;
+    }
     try {
-        const response = await fetch('../api/get_feed.php');
+        const response = await fetch(url);
         if (!response.ok) {
-            console.error('Error fetching feed:', response.status, response.statusText);
-            // It might be better to throw an error here and let the caller handle it
-            // For now, returning an empty array to prevent breaking the app.
-            return [];
+            const errorText = await response.text();
+            console.error('Error fetching feed:', response.status, response.statusText, errorText);
+            throw new Error(`Failed to fetch feed: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
-        return data;
+        return data; // Expects { threads: [...] }
     } catch (error) {
-        console.error('Network error or JSON parsing error:', error);
-        // Return empty array or re-throw, depending on desired error handling strategy
-        return []; // Keep current behavior for getFeed
+        console.error('Network error or JSON parsing error fetching feed:', error);
+        throw error; // Re-throw to be handled by caller
     }
 }
 
@@ -60,3 +64,237 @@ async function sendEmail(emailData) {
         throw error.message ? error : new Error('Failed to send email due to a network or server issue.');
     }
 }
+
+/**
+ * Fetches a person's profile data from the API.
+ * @param {string} personId The ID of the person.
+ * @returns {Promise<Object>} A promise that resolves to the profile data.
+ * @throws {Error} If the request fails.
+ */
+async function getProfile(personId) {
+    if (!personId) {
+        throw new Error("Person ID is required to fetch profile.");
+    }
+    try {
+        const response = await fetch(`../api/get_profile.php?id=${encodeURIComponent(personId)}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Error fetching profile:', response.status, response.statusText, errorText);
+            throw new Error(`Failed to fetch profile: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+        return data; // Expects { name, email_addresses, notes, threads: [...] }
+    } catch (error) {
+        console.error('Network error or JSON parsing error fetching profile:', error);
+        throw error;
+    }
+}
+
+/**
+ * Fetches all groups from the API.
+ * @returns {Promise<Array<Object>>} A promise that resolves to an array of group objects.
+ * @throws {Error} If the request fails.
+ */
+async function getGroups() {
+    try {
+        const response = await fetch('../api/get_groups.php');
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Error fetching groups:', response.status, response.statusText, errorText);
+            throw new Error(`Failed to fetch groups: ${response.status} ${response.statusText}`);
+        }
+        // Assuming the API returns an object like { groups: [...] } or just [...]
+        // Let's assume it returns an array directly for now, as used in app.js and group.js
+        const data = await response.json();
+        return data; // Expects [{ group_id, name }, ...]
+    } catch (error) {
+        console.error('Network error or JSON parsing error fetching groups:', error);
+        throw error;
+    }
+}
+
+/**
+ * Fetches members of a specific group from the API.
+ * @param {string} groupId The ID of the group.
+ * @returns {Promise<Array<Object>>} A promise that resolves to an array of member objects.
+ * @throws {Error} If the request fails.
+ */
+async function getGroupMembers(groupId) {
+    if (!groupId) {
+        throw new Error("Group ID is required to fetch group members.");
+    }
+    try {
+        const response = await fetch(`../api/get_group_members.php?group_id=${encodeURIComponent(groupId)}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Error fetching group members:', response.status, response.statusText, errorText);
+            throw new Error(`Failed to fetch group members: ${response.status} ${response.statusText}`);
+        }
+        // Assuming the API returns an object like { members: [...] } or just [...]
+        // Let's assume it returns an array of members directly.
+        const data = await response.json();
+        return data; // Expects [{ person_id, name }, ...]
+    } catch (error) {
+        console.error('Network error or JSON parsing error fetching group members:', error);
+        throw error;
+    }
+}
+
+
+/**
+ * Renders a single thread object into an HTML element.
+ * This function is now globally available via window.renderThread
+ * @param {Object} threadData - The thread data object.
+ * @param {string} threadSubject - The subject of the parent thread (passed for reply pre-fill).
+ * Expected structure: { thread_id, subject, participants, last_reply_time, emails: [{ email_id, sender_name, body_preview, timestamp, sender_person_id, to_recipients, cc_recipients, attachments }] }
+ * @returns {HTMLElement} A div element representing the thread.
+ */
+window.renderThread = function(threadData, threadSubject) { // threadSubject added as parameter
+    const threadDiv = document.createElement('div');
+    threadDiv.className = 'thread';
+    threadDiv.dataset.threadId = threadData.thread_id;
+
+    const subjectH2 = document.createElement('h2');
+    subjectH2.className = 'thread-subject';
+    subjectH2.textContent = threadData.subject || 'No Subject'; // Use threadData.subject for display
+    threadDiv.appendChild(subjectH2);
+
+    if (threadData.participants && threadData.participants.length > 0) {
+        const participantsP = document.createElement('p');
+        participantsP.className = 'thread-participants';
+        participantsP.textContent = 'Participants: ' + threadData.participants.join(', ');
+        threadDiv.appendChild(participantsP);
+    }
+
+    if (threadData.last_reply_time) {
+        const lastReplyP = document.createElement('p');
+        lastReplyP.className = 'thread-last-reply';
+        lastReplyP.textContent = 'Last reply: ' + new Date(threadData.last_reply_time).toLocaleString();
+        threadDiv.appendChild(lastReplyP);
+    }
+
+    const emailsDiv = document.createElement('div');
+    emailsDiv.className = 'thread-emails';
+
+    if (threadData.emails && threadData.emails.length > 0) {
+        threadData.emails.forEach(email => {
+            const emailDiv = document.createElement('div');
+            emailDiv.className = 'email-summary';
+            emailDiv.dataset.emailId = email.email_id;
+
+            if (email.hasOwnProperty('is_read') && !email.is_read) {
+                emailDiv.classList.add('email-unread');
+            }
+
+            const senderP = document.createElement('p');
+            senderP.className = 'email-sender';
+            const senderNameSpan = document.createElement('span');
+            senderNameSpan.className = 'sender-link';
+            senderNameSpan.textContent = email.sender_name || 'Unknown Sender';
+            if (email.sender_person_id) {
+                senderNameSpan.dataset.personId = email.sender_person_id;
+            } else {
+                senderNameSpan.classList.add('no-profile');
+            }
+            senderP.appendChild(document.createTextNode('From: '));
+            senderP.appendChild(senderNameSpan);
+            emailDiv.appendChild(senderP);
+
+            if (email.to_recipients && email.to_recipients.length > 0) {
+                const toP = document.createElement('p');
+                toP.className = 'email-recipients-to';
+                toP.textContent = `To: ${email.to_recipients.join(', ')}`;
+                emailDiv.appendChild(toP);
+            }
+            if (email.cc_recipients && email.cc_recipients.length > 0) {
+                const ccP = document.createElement('p');
+                ccP.className = 'email-recipients-cc';
+                ccP.textContent = `CC: ${email.cc_recipients.join(', ')}`;
+                emailDiv.appendChild(ccP);
+            }
+
+            const previewP = document.createElement('p');
+            previewP.className = 'email-preview';
+            previewP.textContent = email.body_preview || 'No preview available.';
+            emailDiv.appendChild(previewP);
+
+            if (email.timestamp) {
+                const timestampP = document.createElement('p');
+                timestampP.className = 'email-timestamp';
+                timestampP.textContent = new Date(email.timestamp).toLocaleString(undefined, {
+                    year: 'numeric', month: 'short', day: 'numeric',
+                    hour: 'numeric', minute: '2-digit', hour12: true
+                });
+                emailDiv.appendChild(timestampP);
+            }
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'email-actions';
+
+            const replyBtn = document.createElement('button');
+            replyBtn.className = 'reply-to-email-btn';
+            replyBtn.textContent = 'Reply';
+            replyBtn.dataset.emailId = email.email_id;
+            replyBtn.dataset.subject = threadData.subject || 'No Subject';
+            replyBtn.dataset.sender = email.sender_name || '';
+            replyBtn.dataset.toRecipients = email.to_recipients ? email.to_recipients.join(',') : (email.sender_name || '');
+            replyBtn.dataset.ccRecipients = email.cc_recipients ? email.cc_recipients.join(',') : '';
+            actionsDiv.appendChild(replyBtn);
+
+            const replyAllBtn = document.createElement('button');
+            replyAllBtn.className = 'reply-all-to-email-btn';
+            replyAllBtn.textContent = 'Reply All';
+            replyAllBtn.dataset.emailId = email.email_id;
+            replyAllBtn.dataset.subject = threadData.subject || 'No Subject';
+            replyAllBtn.dataset.sender = email.sender_name || '';
+            const allRecipients = [];
+            if (email.sender_name) allRecipients.push(email.sender_name);
+            if (email.to_recipients) allRecipients.push(...email.to_recipients);
+            if (email.cc_recipients) allRecipients.push(...email.cc_recipients);
+            const uniqueRecipients = [...new Set(allRecipients)];
+            replyAllBtn.dataset.allRecipients = uniqueRecipients.join(',');
+            actionsDiv.appendChild(replyAllBtn);
+
+            const forwardBtn = document.createElement('button');
+            forwardBtn.className = 'forward-email-btn';
+            forwardBtn.textContent = 'Forward';
+            forwardBtn.dataset.emailId = email.email_id;
+            forwardBtn.dataset.subject = threadData.subject || 'No Subject';
+            forwardBtn.dataset.originalSender = email.sender_name || 'Unknown Sender';
+            forwardBtn.dataset.originalDate = email.timestamp ? new Date(email.timestamp).toLocaleString(undefined, {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: 'numeric', minute: '2-digit', hour12: true
+            }) : 'Unknown Date';
+            forwardBtn.dataset.originalBody = email.body_preview || 'No preview available.';
+            actionsDiv.appendChild(forwardBtn);
+
+            emailDiv.appendChild(actionsDiv);
+
+            if (email.attachments && email.attachments.length > 0) {
+                const attachmentsListDiv = document.createElement('div');
+                attachmentsListDiv.className = 'email-attachments-list';
+                const heading = document.createElement('h4');
+                heading.textContent = 'Attachments:';
+                attachmentsListDiv.appendChild(heading);
+                email.attachments.forEach(attachment => {
+                    const link = document.createElement('a');
+                    link.href = attachment.url || (attachment.file_id ? `/api/download_attachment.php?file_id=${attachment.file_id}` : '#');
+                    link.textContent = attachment.filename;
+                    if (attachment.url || attachment.direct_url) {
+                        link.setAttribute('download', attachment.filename);
+                    }
+                    link.target = '_blank';
+                    attachmentsListDiv.appendChild(link);
+                });
+                emailDiv.appendChild(attachmentsListDiv);
+            }
+            emailsDiv.appendChild(emailDiv);
+        });
+    } else {
+        const noEmailsP = document.createElement('p');
+        noEmailsP.textContent = 'No emails in this thread yet.';
+        emailsDiv.appendChild(noEmailsP);
+    }
+    threadDiv.appendChild(emailsDiv);
+    return threadDiv;
+};
