@@ -85,7 +85,7 @@ try {
     }
 
     // 5. Database Interaction (Post-Send)
-    $pdo = get_db_connection(); 
+    $pdo = get_db_connection();
     $user_person_id = DEFAULT_USER_PERSON_ID; // Use defined constant
     $current_timestamp = date('Y-m-d H:i:s');
     $new_email_id = "eml_" . bin2hex(random_bytes(16)); // Generate new ID for this email
@@ -107,26 +107,26 @@ try {
             $thread_id = "thr_" . bin2hex(random_bytes(16)); // Generate new UUID for new thread
             $stmt = $pdo->prepare("INSERT INTO threads (id, subject, created_by_person_id, last_activity_at) VALUES (:id, :subject, :creator_id, :now)");
             $stmt->execute([
-                ':id' => $thread_id, 
+                ':id' => $thread_id,
                 ':subject' => $subject, // Use subject of the first email as thread subject
-                ':creator_id' => $user_person_id, 
+                ':creator_id' => $user_person_id,
                 ':now' => $current_timestamp
             ]);
         }
 
         $message_id_header_value = "<" . $new_email_id . "@" . APP_DOMAIN . ">";
         $stmt_insert_email = $pdo->prepare(
-            "INSERT INTO emails (id, thread_id, from_person_id, subject, body_html, body_text, timestamp, is_read, message_id_header) 
+            "INSERT INTO emails (id, thread_id, from_person_id, subject, body_html, body_text, timestamp, is_read, message_id_header)
              VALUES (:id, :thread_id, :from_person_id, :subject, :body_html, :body_text, :timestamp, :is_read, :message_id_header)"
         );
         $stmt_insert_email->execute([
-            ':id' => $new_email_id, 
-            ':thread_id' => $thread_id, 
+            ':id' => $new_email_id,
+            ':thread_id' => $thread_id,
             ':from_person_id' => $user_person_id, // The sender of the email
-            ':subject' => $subject, 
-            ':body_html' => $body_html, 
+            ':subject' => $subject,
+            ':body_html' => $body_html,
             ':body_text' => $body_text,
-            ':timestamp' => $current_timestamp, 
+            ':timestamp' => $current_timestamp,
             ':is_read' => true, // Sent by user, so marked as read for them
             ':message_id_header' => $message_id_header_value
         ]);
@@ -147,7 +147,7 @@ try {
                 // For simplicity, using email address as name if name not otherwise known
                 $stmt_create_person->execute([
                     ':id' => $recipient_person_id,
-                    ':name' => $r_email_address_str, 
+                    ':name' => $r_email_address_str,
                     ':email_address' => $r_email_address_str
                 ]);
             }
@@ -169,10 +169,10 @@ try {
                     ':email_address' => $r_email_address_str
                 ]);
             }
-            
+
             // Insert into email_recipients
             $stmt_insert_recipient = $pdo->prepare(
-                "INSERT INTO email_recipients (email_id, email_address_id, person_id, type) 
+                "INSERT INTO email_recipients (email_id, email_address_id, person_id, type)
                  VALUES (:email_id, :email_address_id, :person_id, :type)"
             );
             $stmt_insert_recipient->execute([
@@ -207,7 +207,7 @@ try {
                 }
 
                 $stmt_insert_attachment = $pdo->prepare(
-                    "INSERT INTO attachments (id, email_id, filename, mimetype, filepath_on_disk, filesize_bytes) 
+                    "INSERT INTO attachments (id, email_id, filename, mimetype, filepath_on_disk, filesize_bytes)
                      VALUES (:id, :email_id, :filename, :mimetype, :filepath_on_disk, :filesize_bytes)"
                 );
                 $stmt_insert_attachment->execute([
@@ -253,7 +253,7 @@ try {
     // The error message should be generic to the user but logged in detail.
     send_json_error('A database error occurred while saving the email. Please check server logs.', 500);
 } catch (Exception $e) { // Catch any other unforeseen errors, including those from get_db_connection()
-    if ($pdo && $pdo->inTransaction()) {
+    if (isset($pdo) && $pdo && $pdo->inTransaction()) { // Ensure $pdo is set before using
         $pdo->rollBack();
     }
     error_log("General Exception in send_email.php: " . $e->getMessage());

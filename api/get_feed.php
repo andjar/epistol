@@ -119,7 +119,7 @@ try {
         // The SQL query already sorts emails by timestamp ASC, so they should be in order.
         $processed_threads[] = $thread_data;
     }
-    
+
     // Sort threads by last_reply_time DESC (already done by SQL, but good for explicit control if needed)
     // usort($processed_threads, function ($a, $b) {
     //    return strcmp($b['last_reply_time'], $a['last_reply_time']);
