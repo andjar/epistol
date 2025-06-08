@@ -253,7 +253,7 @@ try {
     // The error message should be generic to the user but logged in detail.
     send_json_error('A database error occurred while saving the email. Please check server logs.', 500);
 } catch (Exception $e) { // Catch any other unforeseen errors, including those from get_db_connection()
-    if ($pdo && $pdo->inTransaction()) {
+    if (isset($pdo) && $pdo && $pdo->inTransaction()) { // Ensure $pdo is set before using
         $pdo->rollBack();
     }
     error_log("General Exception in send_email.php: " . $e->getMessage());
