@@ -1,16 +1,10 @@
 <?php
 
-// Go to the project root directory
-chdir(__DIR__ . '/..');
-
-require_once 'config/config.php';
-require_once 'src/db.php';
-
-echo "Starting test data injection...\n";
-
-try {
-    $pdo = get_db_connection();
-    echo "Database connection successful.\n";
+// This function will be called by src/db.php when a new DB is created,
+// or when this script is run directly.
+function inject_initial_data(PDO $pdo): void
+{
+    echo "Starting test data injection via function...\n";
 
     // Truncate tables to start fresh (optional, but good for a test script)
     // Be cautious with this in a real environment
@@ -111,12 +105,37 @@ try {
         }
     }
 
-    echo "Test data injection completed successfully!\n";
+    echo "Test data injection via function completed successfully!\n";
+}
 
-} catch (PDOException $e) {
-    echo "Database error: " . $e->getMessage() . "\n";
-} catch (Exception $e) {
-    echo "Error: " . $e->getMessage() . "\n";
+// Standalone execution block:
+// Only run this if the script is executed directly from the command line.
+// The condition `basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'])` ensures it only runs
+// when this file is the main script, not when it's included.
+if ((php_sapi_name() === 'cli' || php_sapi_name() === 'cgi-fcgi') && basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'])) {
+    // Go to the project root directory
+    chdir(__DIR__ . '/..');
+
+    // These are needed for standalone execution to establish DB connection and load config.
+    require_once 'config/config.php';
+    require_once 'src/db.php';
+
+    echo "Running inject_test_data.php directly from CLI...\n";
+    try {
+        // Establish a new PDO connection for standalone execution
+        $pdo = get_db_connection();
+        echo "Database connection successful for direct execution.\n";
+
+        // Call the main data injection function
+        inject_initial_data($pdo);
+
+    } catch (PDOException $e) {
+        error_log("Database error during direct execution: " . $e->getMessage());
+        echo "Database error during direct execution: " . $e->getMessage() . "\n";
+    } catch (Exception $e) {
+        error_log("Error during direct execution: " . $e->getMessage());
+        echo "Error during direct execution: " . $e->getMessage() . "\n";
+    }
 }
 
 ?>
