@@ -1,185 +1,715 @@
 body {
-    font-family: sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; /* Modern system font stack */
     line-height: 1.6;
     margin: 0;
     padding: 0;
-    background-color: #f4f4f4;
-    color: #333;
+    background-color: #f0f2f5; /* Slightly softer background */
+    color: #1c1e21; /* Standard dark text color */
 }
 
-header {
-    background: #333;
-    color: #fff;
-    padding: 1rem 0;
+/* Global Loader Style */
+.global-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.9); /* Slightly more opaque */
+    z-index: 9999;
     text-align: center;
+    padding: 15px; /* Increased padding */
+    font-size: 1.25em; /* Slightly larger font */
+    color: #007bff; /* Primary blue */
+    border-bottom: 1px solid #dee2e6; /* Lighter border */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Softer shadow */
+    display: none; /* Ensure it's hidden by default via CSS too */
+}
+
+
+header {
+    background: #007bff; /* Primary blue */
+    color: #fff;
+    padding: 0.8rem 1rem; /* Adjusted padding */
+    /* text-align: center; Removed, using flex now */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex; /* For aligning title and button */
+    justify-content: space-between; /* Space between title and button */
+    align-items: center;
 }
 
 header h1 {
     margin: 0;
+    font-size: 1.8em; /* Slightly larger */
 }
 
-main {
-    padding: 1rem;
-    max-width: 800px;
-    margin: 20px auto;
-    background: #fff;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+#new-email-btn { /* Style for the main action button in header */
+    background-color: #28a745; /* Green */
+    color: white;
+    padding: 0.6rem 1.2rem; /* Adjusted padding */
+    border: none;
+    border-radius: 5px; /* Slightly more rounded */
+    cursor: pointer;
+    font-size: 1em; /* Adjusted font size */
+    font-weight: 500; /* Medium weight */
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
+
+#new-email-btn:hover {
+    background-color: #218838; /* Darker green */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+#new-email-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.4); /* Focus ring */
+}
+
+
+/* Standard Button Styling - General */
+button, input[type="submit"], input[type="button"] {
+    padding: 8px 15px; /* Default padding */
+    border: 1px solid transparent; /* Default border */
+    border-radius: 4px; /* Default border-radius */
+    cursor: pointer;
+    font-size: 0.95em; /* Default font size */
+    font-weight: 500; /* Medium weight for buttons */
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, opacity 0.2s ease-in-out;
+    /* Standardize text color for general buttons if needed, or rely on specific styles */
+}
+button:hover, input[type="submit"]:hover, input[type="button"]:hover {
+    opacity: 0.9; /* Slight opacity change on hover for most buttons */
+}
+button:focus, input[type="submit"]:focus, input[type="button"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.35); /* Default focus ring, can be overridden */
+}
+button:disabled, input:disabled { /* General disabled style */
+    opacity: 0.65;
+    cursor: not-allowed !important; /* Important to override other cursor styles */
+}
+
+
+/* Make main a flex container to position sidebar and feed */
+.main-layout {
+    display: flex;
+    max-width: 1200px;
+    margin: 25px auto; /* Increased margin */
+    padding: 1.5rem; /* Increased padding */
+    gap: 25px; /* Increased gap */
+}
+
+#groups-sidebar {
+    width: 280px; /* Slightly wider sidebar */
+    background-color: #ffffff; /* White background for sidebar */
+    padding: 20px; /* Increased padding */
+    border-radius: 8px; /* More rounded corners */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06); /* Softer, more distinct shadow */
+    height: fit-content;
+}
+
+#groups-sidebar h2, #groups-sidebar h3 {
+    color: #0056b3; /* Consistent blue for headings */
+    margin-top: 0;
+    margin-bottom: 15px; /* Increased margin */
+    border-bottom: 1px solid #dee2e6; /* Lighter border */
+    padding-bottom: 10px; /* Increased padding */
+    font-size: 1.3em; /* Larger heading for Groups */
+}
+#groups-sidebar h3 {
+    font-size: 1.15em; /* Slightly smaller for subheadings */
+    color: #0069d9; /* Slightly lighter blue for subheadings */
+}
+
+#groups-list-container {
+    margin-bottom: 25px; /* Increased margin */
+    max-height: 250px;
+    overflow-y: auto;
+    padding-right: 8px; /* Space for scrollbar, if needed */
+}
+
+.group-item {
+    padding: 10px 12px; /* Increased padding */
+    margin-bottom: 8px; /* Increased margin */
+    background-color: #f8f9fa; /* Light background for items */
+    border: 1px solid #e9ecef; /* Lighter border */
+    border-radius: 4px; /* Consistent border-radius */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+.group-item:hover {
+    background-color: #eef2f7; /* Hover effect */
+    border-color: #cce0ff;
+}
+
+.group-item span {
+    flex-grow: 1;
+    color: #343a40; /* Darker text for group name */
+    font-weight: 500; /* Medium weight for group names */
+}
+
+.view-group-members-btn {
+    padding: 6px 10px; /* Adjusted padding */
+    font-size: 0.88em; /* Adjusted font size */
+    background-color: #6c757d; /* Secondary button color */
+    color: white;
+    /* border: none; Already in general button */
+    border-radius: 4px; /* Consistent border-radius */
+    /* cursor: pointer; Already in general button */
+    /* transition: background-color 0.2s ease-in-out; Already in general button */
+}
+
+.view-group-members-btn:hover {
+    background-color: #5a6268; /* Darker secondary */
+    opacity: 1; /* Override general hover opacity if needed */
+}
+.view-group-members-btn:focus {
+    box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.4); /* Focus ring */
+}
+
+
+#create-group-section, #group-filter-section {
+    margin-bottom: 25px; /* Increased margin */
+}
+
+#new-group-name, #group-feed-filter {
+    width: calc(100% - 24px); /* Adjusted for padding and border */
+    padding: 10px; /* Standardized padding */
+    margin-bottom: 12px; /* Increased margin */
+    border: 1px solid #ced4da; /* Lighter border */
+    border-radius: 4px; /* Consistent border-radius */
+    font-size: 0.95em;
+    background-color: #fff; /* Ensure white background */
+    color: #495057; /* Standard input text color */
+}
+#new-group-name:focus, #group-feed-filter:focus {
+    border-color: #80bdff; /* Standard focus border color */
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25); /* Standard focus shadow */
+    outline: none;
+}
+select#group-feed-filter { /* Ensure select arrow is visible */
+    appearance: auto;
+    -webkit-appearance: auto;
+    -moz-appearance: auto;
+}
+
+
+#create-group-btn {
+    width: 100%;
+    padding: 10px 15px; /* Standardized button padding */
+    background-color: #28a745; /* Green for create */
+    color: white;
+    /* border: none; Already in general button */
+    border-radius: 4px; /* Consistent border-radius */
+    /* cursor: pointer; Already in general button */
+    font-size: 1em; /* Larger font for primary action */
+    /* transition: background-color 0.2s ease-in-out; Already in general button */
+}
+
+#create-group-btn:hover {
+    background-color: #218838; /* Darker green */
+    opacity: 1; /* Override general hover opacity */
+}
+#create-group-btn:focus {
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.4); /* Focus ring */
+}
+#create-group-btn:disabled {
+    background-color: #5cb85c; /* Lighter green when disabled (already in general) */
+    opacity: 0.65; /* Already in general */
+}
+
 
 #feed-container {
-    /* Styles for the feed container itself, if any */
+    flex-grow: 1;
+    background: #ffffff; /* White background */
+    padding: 25px; /* Increased padding */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06); /* Softer, more distinct shadow */
+    border-radius: 8px; /* More rounded corners */
 }
 
 .thread {
-    border: 1px solid #ddd;
-    background-color: #fff;
-    margin-bottom: 20px;
-    padding: 15px;
-    border-radius: 5px;
+    border: 1px solid #dee2e6; /* Lighter border */
+    background-color: #ffffff; /* Ensure threads are white if feed-container gets a color */
+    margin-bottom: 25px; /* Increased margin */
+    padding: 20px; /* Increased padding */
+    border-radius: 8px; /* More rounded corners */
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05); /* Subtle shadow for threads */
 }
 
 .thread-subject {
     margin-top: 0;
-    color: #0056b3; /* Dark blue for subject */
+    margin-bottom: 10px; /* Added margin */
+    color: #0056b3;
+    font-size: 1.45em; /* Larger subject */
+    font-weight: 600; /* Bolder subject */
 }
 
 .thread-participants {
     font-size: 0.9em;
-    color: #555;
-    margin-bottom: 5px;
+    color: #495057; /* Darker grey */
+    margin-bottom: 10px; /* Increased margin */
 }
 
 .thread-last-reply {
-    font-size: 0.8em;
-    color: #777;
-    margin-bottom: 10px;
+    font-size: 0.85em; /* Slightly larger */
+    color: #6c757d; /* Medium grey */
+    margin-bottom: 15px; /* Increased margin */
 }
 
 .thread-emails {
-    margin-top: 10px;
-    padding-left: 15px;
-    border-left: 3px solid #eee;
+    margin-top: 20px; /* Increased margin */
+    padding-left: 20px; /* Increased padding */
+    border-left: 4px solid #007bff; /* Primary blue for emphasis, slightly thicker */
 }
 
 .email-summary {
-    border: 1px solid #eee;
-    background-color: #f9f9f9;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 3px;
+    border: 1px solid #e9ecef; /* Lighter border */
+    background-color: #f8f9fa; /* Light background for emails */
+    padding: 15px; /* Increased padding */
+    margin-bottom: 15px; /* Increased margin */
+    border-radius: 6px; /* Slightly more rounded */
+}
+.email-summary:last-child {
+    margin-bottom: 0; /* Remove margin for the last email in a thread */
 }
 
-.email-sender {
-    font-weight: bold;
-    margin-bottom: 3px;
-    color: #333;
+
+.email-sender { /* This is now a <p> containing a <span>.sender-link */
+    margin-bottom: 8px; /* Increased margin */
+    color: #343a40; /* Darker text for "From:" part */
+    font-size: 1.05em; /* Overall size for the sender line */
 }
+/* .sender-link styles will apply to the actual name */
+
+
+.email-recipients-to, .email-recipients-cc { /* Added for future use if populated */
+    font-size: 0.85em;
+    color: #555;
+    margin-bottom: 3px;
+}
+
 
 .email-preview {
-    font-size: 0.95em;
-    color: #444;
-    margin-bottom: 3px;
+    font-size: 1em; /* Larger preview text */
+    color: #343a40; /* Darker grey for better readability */
+    margin-bottom: 10px; /* Increased margin */
+    line-height: 1.55; /* Improved line height */
 }
 
 .email-timestamp {
     font-size: 0.8em;
-    color: #888;
+    color: #6c757d; /* Medium grey */
+    text-align: right;
+    margin-top: 8px; /* Add some space above timestamp */
+}
+
+.email-unread {
+    background-color: #e6f2ff; /* Lighter, more subtle unread blue */
+    border-left-width: 4px; /* Make unread border same as email list border */
+    border-left-color: #0056b3 !important; /* Stronger left border for unread, !important to override .thread-emails border */
+    padding-left: 12px; /* Adjust padding if border width changes */
+}
+
+.email-unread .email-sender .sender-link { /* Target the link inside sender for unread */
+    /* font-weight: bold; sender-link is already bold by default in later styles */
+    color: #0056b3 !important; /* Blue for unread sender/subject */
+}
+.email-unread .thread-subject { /* This might not be directly applicable if subject is outside email-summary */
+    color: #0056b3 !important;
+}
+/* If thread-subject is part of .email-unread, this will apply. Otherwise, it's for other contexts. */
+.thread-subject.email-unread { /* If an entire thread can be unread */
+     color: #0056b3;
+}
+
+
+.email-actions {
+    margin-top: 15px; /* Increased margin */
+    padding-top: 10px; /* Increased padding */
+    border-top: 1px solid #e0e0e0; /* Lighter border, was #eee, then #e9ecef */
     text-align: right;
 }
 
+.email-actions button {
+    background-color: #007bff; /* Primary blue */
+    color: white;
+    /* border: none; From general */
+    padding: 8px 12px; /* Adjusted padding for action buttons */
+    margin-left: 8px; /* Standardized margin */
+    border-radius: 4px; /* Consistent border-radius */
+    /* cursor: pointer; From general */
+    font-size: 0.9em; /* Slightly smaller for less prominent actions */
+    /* transition from general */
+}
+
+.email-actions button:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+    opacity: 1; /* Override general for these */
+}
+.email-actions button:disabled {
+    background-color: #6c757d; /* Grey when disabled */
+    opacity: 0.65; /* From general */
+}
+
+
+/* Specific button styling if needed */
+.reply-to-email-btn {
+    /* background-color: #28a745; /* Example: Green */
+}
+/* .reply-to-email-btn:hover { background-color: #1e7e34; } */
+
+.reply-all-to-email-btn {
+    /* background-color: #17a2b8; /* Example: Teal */
+}
+/* .reply-all-to-email-btn:hover { background-color: #117a8b; } */
+
+.forward-email-btn {
+    /* background-color: #ffc107; /* Example: Yellow */
+    /* color: #212529; */
+}
+/* .forward-email-btn:hover { background-color: #d39e00; } */
+
+.sender-link {
+    cursor: pointer;
+    text-decoration: underline;
+    color: #0056b3; /* Same as thread subject for consistency */
+}
+
+.sender-link:hover {
+    color: #003d80;
+    text-decoration: underline; /* Underline on hover */
+}
+
+.sender-link.no-profile {
+    text-decoration: none;
+    cursor: default;
+    color: #343a40; /* Standard text color if no profile */
+    font-weight: bold; /* Still bold */
+}
+
+
+/* Profile Modal Specific Styles */
+#profile-modal .modal-content {
+    max-width: 500px; /* Slightly narrower profile modal */
+    padding: 25px; /* Increased padding */
+}
+
+#profile-name {
+    color: #0056b3; /* Blue for profile name */
+    margin-top: 0;
+    border-bottom: 1px solid #dee2e6; /* Lighter border */
+    padding-bottom: 12px; /* Increased padding */
+    margin-bottom: 20px; /* Increased margin */
+    font-size: 1.6em;
+}
+
+#profile-modal p {
+    margin-bottom: 10px; /* Increased margin */
+    font-size: 1em; /* Slightly larger */
+    color: #495057; /* Darker grey */
+}
+#profile-modal p strong { /* If you add strong tags for labels */
+    color: #343a40;
+}
+
+
+#profile-modal p span { /* This is for the actual data */
+    color: #1c1e21; /* Standard text color */
+    font-weight: normal;
+}
+
+#profile-modal h3 {
+    margin-top: 25px; /* Increased margin */
+    margin-bottom: 12px; /* Increased margin */
+    color: #0056b3; /* Blue for subheading */
+    font-size: 1.2em; /* Slightly larger */
+    border-bottom: 1px solid #dee2e6; /* Lighter border */
+    padding-bottom: 8px; /* Increased padding */
+}
+
+#profile-threads-container {
+    max-height: 250px; /* Adjusted height */
+    overflow-y: auto;
+    border: 1px solid #e9ecef; /* Lighter border */
+    padding: 15px; /* Increased padding */
+    background-color: #f8f9fa; /* Light background */
+    border-radius: 4px; /* Consistent border-radius */
+}
+
+.profile-thread-summary {
+    padding: 10px; /* Increased padding */
+    border-bottom: 1px solid #e0e0e0; /* Lighter dotted border */
+}
+
+.profile-thread-summary:last-child {
+    border-bottom: none;
+}
+
+.profile-thread-summary p {
+    margin: 5px 0; /* Increased margin */
+    font-size: 0.95em; /* Slightly larger */
+    color: #343a40;
+}
+.profile-thread-summary p:last-child {
+    margin-bottom: 0;
+}
+
+
 footer {
     text-align: center;
-    padding: 1rem 0;
-    margin-top: 20px;
+    padding: 1.5rem 1rem; /* Increased padding */
+    margin-top: 30px; /* Increased margin */
     font-size: 0.9em;
-    color: #777;
+    color: #6c757d; /* Medium grey */
+    background-color: #e9ecef; /* Light background for footer */
+    border-top: 1px solid #dee2e6; /* Lighter border */
 }
 
-/* Loading and error messages */
-#feed-container p {
+/* Loading and error messages in containers */
+#feed-container p, #groups-list-container p, #profile-threads-container p { /* Apply to all specific loaders */
     text-align: center;
     font-style: italic;
-    color: #777;
-    padding: 20px;
+    color: #6c757d; /* Medium grey */
+    padding: 25px; /* Increased padding */
+    font-size: 1.05em;
 }
 
-/* Modal Styles */
+
+/* Modal Styles Refinements */
 .modal {
-    display: none; /* Hidden by default, will be shown by JS */
-    position: fixed; /* Stay in place */
-    z-index: 1000; /* Sit on top */
+    display: none;
+    position: fixed;
+    z-index: 1050; /* Higher z-index for modals */
     left: 0;
     top: 0;
-    width: 100%; /* Full width */
-    height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if needed */
-    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5); /* Slightly darker backdrop */
 }
 
 .modal-content {
-    background-color: #fefefe;
-    margin: 10% auto; /* 10% from the top and centered */
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%; /* Could be more or less, depending on screen size */
-    max-width: 600px; /* Maximum width */
-    border-radius: 8px;
+    background-color: #fff; /* Explicit white background */
+    margin: 5% auto; /* Adjusted margin for better centering on larger screens */
+    padding: 25px; /* Increased padding */
+    border: 1px solid #adb5bd; /* Lighter border */
+    width: 90%; /* Responsive width */
+    max-width: 550px; /* Adjusted max-width for compose */
+    border-radius: 8px; /* Consistent border-radius */
     position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2); /* Softer, more pronounced shadow */
+}
+#profile-modal .modal-content { /* Specific max-width for profile if different */
+    max-width: 500px;
 }
 
+
 .close-btn {
-    color: #aaa;
+    color: #6c757d; /* Medium grey */
     float: right;
-    font-size: 28px;
+    font-size: 1.8rem; /* Larger close button */
     font-weight: bold;
+    line-height: 1; /* Ensure proper vertical alignment */
+    opacity: 0.7;
+    transition: opacity 0.2s ease-in-out;
 }
 
 .close-btn:hover,
 .close-btn:focus {
-    color: black;
+    color: #343a40; /* Darker grey on hover/focus */
     text-decoration: none;
     cursor: pointer;
+    opacity: 1;
 }
 
+/* Compose Form Refinements */
 #compose-form div {
-    margin-bottom: 15px;
+    margin-bottom: 18px; /* Increased margin */
 }
 
 #compose-form label {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 6px; /* Increased margin */
+    font-weight: bold;
+    color: #495057; /* Darker grey for labels */
 }
 
 #compose-form input[type="email"],
 #compose-form input[type="text"],
-#compose-form textarea {
-    width: calc(100% - 22px); /* Full width minus padding and border */
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+#compose-form textarea,
+#compose-form input[type="file"] { /* Apply to file input as well */
+    width: calc(100% - 24px); /* Adjusted for padding */
+    padding: 10px; /* Standardized padding */
+    border: 1px solid #ced4da; /* Lighter border */
+    border-radius: 4px; /* Consistent border-radius */
+    font-size: 0.95em;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    background-color: #fff; /* Ensure inputs have white background */
 }
+#compose-form input:focus, #compose-form textarea:focus { /* General focus for form inputs */
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    outline: none;
+}
+
 
 #compose-form textarea {
     resize: vertical;
+    min-height: 120px; /* Minimum height for textarea */
+}
+
+#compose-form input[type="file"] {
+    padding: 8px 10px; /* Adjusted padding for file input */
+    /* background-color: #fff; Already applied above */
 }
 
 #compose-form .form-actions {
     text-align: right;
+    margin-top: 25px; /* Increased margin */
 }
 
-#compose-form button {
-    padding: 10px 15px;
-    border: none;
+#compose-form button { /* General style for buttons in form actions */
+    padding: 10px 18px; /* Increased padding */
+    /* border: 1px solid transparent; From general button */
     border-radius: 4px;
-    cursor: pointer;
+    /* cursor: pointer; From general button */
     margin-left: 10px;
+    font-size: 1em; /* Larger font for actions */
+    /* transition from general button */
 }
 
 #compose-form button[type="submit"] {
-    background-color: #007bff;
+    background-color: #007bff; /* Primary blue */
     color: white;
+    border-color: #007bff; /* Match background */
+}
+#compose-form button[type="submit"]:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+    opacity: 1; /* Override general */
+}
+#compose-form button[type="submit"]:focus {
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5); /* Primary blue focus */
 }
 
-#compose-form button[type="button"] {
-    background-color: #ccc;
+
+#compose-form button[type="button"] { /* Cancel button */
+    background-color: #6c757d; /* Secondary grey */
+    color: white;
+    border-color: #6c757d;
+}
+#compose-form button[type="button"]:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
+    opacity: 1; /* Override general */
+}
+#compose-form button[type="button"]:focus {
+    box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.5); /* Secondary grey focus */
+}
+
+
+/* Email Attachments Display Refinements */
+.email-attachments-list {
+    margin-top: 18px; /* Increased margin */
+    padding: 12px; /* Increased padding */
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+}
+
+.email-attachments-list h4 {
+    margin-top: 0;
+    margin-bottom: 10px; /* Increased margin */
+    font-size: 1em; /* Standardized size */
+    color: #343a40; /* Darker text */
+    font-weight: bold;
+}
+
+.email-attachments-list a {
+    display: inline-block;
+    margin-right: 8px; /* Adjusted margin */
+    margin-bottom: 8px; /* Adjusted margin */
+    text-decoration: none;
+    color: #007bff;
+    padding: 5px 10px; /* Adjusted padding */
+    border: 1px solid #007bff; /* Primary blue border */
+    border-radius: 4px;
+    font-size: 0.9em;
+    background-color: #fff;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+.email-attachments-list a:hover {
+    background-color: #007bff; /* Primary blue background on hover */
+    color: #fff; /* White text on hover */
+    text-decoration: none;
+}
+
+
+/* Responsive Adjustments */
+@media (max-width: 992px) { /* Larger breakpoint for sidebar stacking if needed */
+    .main-layout {
+        flex-direction: column;
+    }
+    #groups-sidebar {
+        width: 100%;
+        margin-bottom: 1.5rem; /* Increased margin when stacked */
+        max-height: none; /* Allow full height when stacked if desired, or set a new max */
+    }
+}
+
+@media (max-width: 768px) {
+    header {
+        flex-direction: column; /* Stack header items */
+        padding: 1rem;
+    }
+    header h1 {
+        margin-bottom: 0.5rem; /* Space between title and button */
+    }
+    #new-email-btn {
+        width: 100%; /* Full width button on small screens */
+        padding: 0.8rem;
+    }
+
+    .modal-content {
+        width: 95%; /* Wider modals on very small screens */
+        margin: 2% auto; /* Reduce top margin */
+        padding: 15px; /* Reduce padding */
+    }
+    #compose-form button { /* Stack form action buttons */
+        width: 100%;
+        margin-left: 0;
+        margin-bottom: 10px;
+    }
+    #compose-form button:last-child {
+        margin-bottom: 0;
+    }
+
+    .email-actions button { /* Stack email action buttons */
+        width: calc(50% - 4px); /* Two buttons per row, with small gap */
+        margin-bottom: 8px;
+        margin-left: 0; /* remove left margin when stacking */
+    }
+     /* Ensure buttons are properly spaced in a two-column layout */
+    .email-actions button:nth-child(odd) {
+        margin-right: 4px;
+    }
+    .email-actions button:nth-child(even) {
+        margin-left: 4px;
+    }
+
+
+}
+
+@media (max-width: 480px) {
+    body {
+        font-size: 15px; /* Slightly smaller base font for very small screens */
+    }
+    header h1 {
+        font-size: 1.5em;
+    }
+    .email-actions button { /* Full width buttons in email actions on very small screens */
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0; /* Ensure full width */
+    }
 }
