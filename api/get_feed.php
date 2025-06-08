@@ -40,86 +40,104 @@ try {
     // Calculate offset for pagination
     $offset = ($page - 1) * $limit;
 
-    // 4. Placeholder for DB Query
-    // The actual SQL query will be complex, involving multiple joins and subqueries.
-    // Key aspects:
-    // - Select from 'threads' table (aliased as 't').
-    // - Order by the timestamp of the latest email in each thread (descending).
-    // - Paginate using 'LIMIT :limit OFFSET :offset'.
-    // - Join with 'emails' (aliased 'e') to find the latest email for each thread.
-    //   This often involves a subquery or a window function if supported and efficient.
-    // - Join with 'persons' (aliased 'p_sender') for the sender of the latest email.
-    // - Join with 'thread_participants' (aliased 'tp') and then 'persons' (aliased 'p_participant')
-    //   to list participants. This might involve GROUP_CONCAT or fetching them in a separate query per thread.
-    // - Calculate 'unread_count' per thread, specific to the requesting user (this adds complexity,
-    //   often requiring a user_thread_status table or similar).
+    // 4. Database Query
+    $sql = "
+        SELECT
+            t.id AS thread_id,
+            t.subject AS subject,
+            e.id AS email_id,
+            p.name AS sender_name,
+            COALESCE(e.snippet, SUBSTR(e.body_text, 1, 100)) AS body_preview,
+            e.timestamp AS email_timestamp,
+            thread_max_timestamps.max_ts AS last_reply_time
+        FROM
+            threads t
+        JOIN
+            emails e ON t.id = e.thread_id
+        JOIN
+            persons p ON e.from_person_id = p.id
+        JOIN
+            (SELECT thread_id, MAX(timestamp) AS max_ts FROM emails GROUP BY thread_id) AS thread_max_timestamps
+            ON t.id = thread_max_timestamps.thread_id
+        WHERE
+            t.id IN (
+                SELECT paginated_thread_ids.id
+                FROM (
+                    SELECT thr.id, MAX(em_inner.timestamp) AS inner_max_ts
+                    FROM threads thr
+                    JOIN emails em_inner ON thr.id = em_inner.thread_id
+                    GROUP BY thr.id
+                    ORDER BY inner_max_ts DESC
+                    LIMIT :limit OFFSET :offset
+                ) AS paginated_thread_ids
+            )
+        ORDER BY
+            last_reply_time DESC, e.timestamp ASC;
+    ";
 
-    // Conceptual main query structure:
-    /*
-    SELECT
-        t.id AS thread_id,
-        t.subject AS thread_subject,
-        latest_email.timestamp AS last_reply_timestamp,
-        latest_email.snippet AS latest_email_snippet,
-        latest_email.id AS latest_email_id,
-        latest_email_sender.name AS latest_email_sender_name,
-        latest_email.is_read AS latest_email_is_read, -- This is user-specific and complex
-        GROUP_CONCAT(DISTINCT p_participant.name SEPARATOR ', ') AS participants_names_str, -- Simplified participant list
-        (SELECT COUNT(*) FROM emails e_unread WHERE e_unread.thread_id = t.id AND e_unread.is_read = 0) AS unread_count -- User-specific
-    FROM
-        threads t
-    JOIN
-        (SELECT -- Subquery to get the latest email per thread
-             e_sub.thread_id, e_sub.id, e_sub.snippet, e_sub.timestamp, e_sub.sender_person_id, e_sub.is_read
-         FROM emails e_sub
-         INNER JOIN (
-             SELECT thread_id, MAX(timestamp) AS max_timestamp
-             FROM emails
-             GROUP BY thread_id
-         ) AS max_emails ON e_sub.thread_id = max_emails.thread_id AND e_sub.timestamp = max_emails.max_timestamp
-        ) AS latest_email ON t.id = latest_email.thread_id
-    LEFT JOIN
-        persons latest_email_sender ON latest_email.sender_person_id = latest_email_sender.id
-    LEFT JOIN
-        thread_participants tp ON t.id = tp.thread_id
-    LEFT JOIN
-        persons p_participant ON tp.person_id = p_participant.id
-    GROUP BY
-        t.id, t.subject, latest_email.timestamp, latest_email.snippet, latest_email.id, latest_email_sender.name, latest_email.is_read
-    ORDER BY
-        latest_email.timestamp DESC
-    LIMIT :limit OFFSET :offset;
-    */
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // As this is a placeholder, we'll return an empty array for threads.
-    $threads_from_db = []; // This would be $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // 5. Data Processing (Placeholder)
+    // 5. Data Processing
     $processed_threads = [];
-    // foreach ($threads_from_db as $raw_thread) {
-    //     $processed_threads[] = [
-    //         "id" => $raw_thread['thread_id'],
-    //         "subject" => $raw_thread['thread_subject'],
-    //         "last_reply_at" => $raw_thread['last_reply_timestamp'], // Already formatted or format here
-    //         "participant_avatars" => [], // Placeholder: Logic to fetch/determine avatars
-    //         "participants_names" => $raw_thread['participants_names_str'], // Placeholder: Logic for "You, John & N others"
-    //         "latest_email" => [
-    //             "id" => $raw_thread['latest_email_id'],
-    //             "snippet" => $raw_thread['latest_email_snippet'],
-    //             "timestamp" => $raw_thread['last_reply_timestamp'], // Or specific latest_email_timestamp
-    //             "sender_name" => $raw_thread['latest_email_sender_name'],
-    //             "is_read" => (bool)$raw_thread['latest_email_is_read'] // User-specific
-    //         ],
-    //         "unread_count" => (int)$raw_thread['unread_count'] // User-specific
-    //     ];
-    // }
+    $threads_map = []; // Helper map to group emails by thread_id
 
-    // Placeholder for total items (requires a separate COUNT(*) query without LIMIT/OFFSET)
-    // $count_stmt = $pdo->query("SELECT COUNT(*) FROM threads");
-    // $total_items = $count_stmt->fetchColumn();
-    $total_items = 0; // Placeholder
+    foreach ($results as $row) {
+        $thread_id = $row['thread_id'];
+
+        if (!isset($threads_map[$thread_id])) {
+            $threads_map[$thread_id] = [
+                'thread_id' => $thread_id,
+                'subject' => $row['subject'],
+                'participants' => [], // Will be populated from emails
+                'last_reply_time' => $row['last_reply_time'],
+                'emails' => []
+            ];
+        }
+
+        $threads_map[$thread_id]['emails'][] = [
+            'email_id' => $row['email_id'],
+            'sender_name' => $row['sender_name'],
+            'body_preview' => $row['body_preview'],
+            'timestamp' => $row['email_timestamp']
+        ];
+    }
+
+    // Populate participants and structure the final array
+    foreach ($threads_map as $thread_id => $thread_data) {
+        $participant_names = [];
+        foreach ($thread_data['emails'] as $email) {
+            if (!in_array($email['sender_name'], $participant_names)) {
+                $participant_names[] = $email['sender_name'];
+            }
+        }
+        $thread_data['participants'] = $participant_names;
+        // Ensure emails are ordered by timestamp as per original query's secondary sort
+        // The SQL query already sorts emails by timestamp ASC, so they should be in order.
+        $processed_threads[] = $thread_data;
+    }
+
+    // Sort threads by last_reply_time DESC (already done by SQL, but good for explicit control if needed)
+    // usort($processed_threads, function ($a, $b) {
+    //    return strcmp($b['last_reply_time'], $a['last_reply_time']);
+    // });
+
+
+    // Fetch total number of threads for pagination
+    $count_stmt = $pdo->query("SELECT COUNT(*) FROM threads");
+    $total_items = (int)$count_stmt->fetchColumn();
     $total_pages = ($limit > 0 && $total_items > 0) ? ceil($total_items / $limit) : 1;
-    if ($total_items == 0) $total_pages = 0;
+     if ($total_items == 0) {
+        $total_pages = 0;
+        // If there are no items, current page should ideally be 0 or 1.
+        // Let's ensure current_page doesn't exceed total_pages if total_items is 0.
+        // However, the input validation already ensures $page >= 1.
+        // If $total_items is 0, $total_pages will be 0.
+        // $page could still be 1. This seems acceptable.
+    }
 
 
     // 6. Success Response
