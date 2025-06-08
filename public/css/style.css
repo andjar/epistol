@@ -103,6 +103,73 @@ button:disabled, input:disabled { /* General disabled style */
     border-radius: 8px; /* More rounded corners */
     box-shadow: 0 2px 8px rgba(0,0,0,0.06); /* Softer, more distinct shadow */
     height: fit-content;
+    transition: width 0.3s ease, padding 0.3s ease; /* Smooth transition for collapse */
+}
+
+#toggle-groups-sidebar-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    background-color: #6c757d; /* Secondary button color */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95em;
+    text-align: center;
+}
+
+#toggle-groups-sidebar-btn:hover {
+    background-color: #5a6268; /* Darker secondary */
+    opacity: 1;
+}
+
+#groups-sidebar.collapsed {
+    width: 0;
+    padding: 0;
+    overflow: hidden; /* Hide content when collapsed */
+}
+
+#groups-sidebar.collapsed > *:not(#toggle-groups-sidebar-btn) {
+    display: none; /* Hide all children except the button */
+}
+
+#groups-sidebar.collapsed #toggle-groups-sidebar-btn {
+    margin: 0; /* Remove margin when sidebar is collapsed */
+    border-radius: 0 4px 4px 0; /* Adjust button corners when collapsed and potentially docked */
+     /* You might want to change the text or use an icon for the button when collapsed */
+    /* For example, position it fixed or absolute to be visible */
+}
+
+/* Ensure the button is still somewhat visible and functional when collapsed.
+   This might need more advanced CSS if the button is to overlay or be fixed.
+   For now, it will collapse with the sidebar but remain clickable if its parent has 0 width.
+   A better approach for a "peek-out" button would be to not set its display to none.
+   Let's adjust the collapsed state to keep the button visible.
+*/
+#groups-sidebar.collapsed #toggle-groups-sidebar-btn {
+    display: block; /* Ensure it's displayed */
+    width: auto; /* Let it size to content or a fixed icon size */
+    padding: 10px; /* Keep padding */
+    /* position: absolute; */ /* Example: if you want it to overlay */
+    /* top: 10px; left: 0; */
+    /* For now, it will be at the top of the 0-width sidebar */
+    /* Consider changing text to an icon for collapsed state */
+}
+#groups-sidebar.collapsed h2,
+#groups-sidebar.collapsed #groups-list-container,
+#groups-sidebar.collapsed #create-group-section,
+#groups-sidebar.collapsed #group-filter-section {
+    display: none;
+}
+
+
+/* When sidebar is collapsed, the feed container should take up more space */
+.main-layout.sidebar-collapsed #feed-container {
+    /* This assumes #feed-container is a direct child of .main-layout */
+    /* If flex-grow is already 1 on #feed-container, it should expand automatically.
+       No specific rule needed here if #groups-sidebar actually shrinks to 0 width. */
 }
 
 #groups-sidebar h2, #groups-sidebar h3 {
@@ -651,10 +718,33 @@ footer {
         flex-direction: column;
     }
     #groups-sidebar {
-        width: 100%;
+        width: 100% !important; /* Override inline styles from JS if necessary for responsive stacking */
+        padding: 20px !important; /* Restore padding */
         margin-bottom: 1.5rem; /* Increased margin when stacked */
         max-height: none; /* Allow full height when stacked if desired, or set a new max */
     }
+    #groups-sidebar.collapsed {
+        /* How it should behave when "collapsed" on mobile:
+           Option 1: Still collapses to 0 width. User un-collapses to see it full width.
+           Option 2: "Collapsed" means it's hidden or a toggle reveals it as an overlay.
+           For now, let's assume Option 1: it still tries to go to 0 width.
+           The !important might be problematic if JS directly sets width to 0.
+        */
+        width: 0 !important;
+        padding: 0 !important;
+    }
+    #groups-sidebar.collapsed > *:not(#toggle-groups-sidebar-btn) {
+        display: none !important;
+    }
+    #toggle-groups-sidebar-btn{
+        /* Ensure button is always visible and styled appropriately on mobile */
+    }
+
+    /* If the sidebar is meant to be always full-width on mobile (not collapsible),
+       then the .collapsed styles should be conditional on screen width,
+       or JS should not apply .collapsed on smaller screens.
+       Let's assume collapsibility is desired on all screen sizes for now.
+    */
 }
 
 @media (max-width: 768px) {
@@ -712,4 +802,81 @@ footer {
         margin-left: 0;
         margin-right: 0; /* Ensure full width */
     }
+}
+
+/* === Page Styles for Profile and Group === */
+.page-container {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* General heading style for H1 within .page-container */
+.page-container h1 {
+    color: #0056b3; /* Dark blue, consistent with other main headings */
+    border-bottom: 1px solid #dee2e6; /* Light gray border */
+    padding-bottom: 10px; /* Spacing below the heading */
+    margin-top: 0; /* Remove default top margin */
+    margin-bottom: 20px; /* Spacing after the heading */
+    font-size: 1.8em; /* Similar to header h1 */
+}
+
+/* Specifically target profile and group page main headers if needed, though the above should cover them */
+#profile-page-name,
+#group-page-name {
+    /* Styles are covered by .page-container h1, but can add specifics here if needed */
+}
+
+
+.page-container .back-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #007bff; /* Standard link blue */
+    text-decoration: none;
+}
+.page-container .back-link:hover {
+    text-decoration: underline;
+}
+
+/* Placeholder section styling for both profile and group pages */
+#profile-emails-container,
+#profile-notes-container,
+#profile-threads-container,
+#group-members-container,
+#group-feed-container {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #e9ecef; /* Light border */
+    border-radius: 4px; /* Rounded corners */
+    background-color: #f8f9fa; /* Light background tint */
+}
+
+/* Styling for headings within these sections */
+#profile-emails-container h2,
+#profile-notes-container h2,
+#profile-threads-container h2,
+#group-members-container h2,
+#group-feed-container h2 {
+    color: #0056b3; /* Consistent blue for subheadings */
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.3em; /* Slightly smaller than main page heading */
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Styling for lists within group members section */
+#group-members-container .members-list {
+    list-style-type: none;
+    padding-left: 0;
+}
+#group-members-container .members-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+#group-members-container .members-list li:last-child {
+    border-bottom: none;
 }

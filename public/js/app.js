@@ -10,16 +10,9 @@ const composeSubject = document.getElementById('compose-subject');
 const composeBody = document.getElementById('compose-body');
 const composeInReplyTo = document.getElementById('compose-in-reply-to');
 
-// Profile Modal DOM Elements
-const profileModal = document.getElementById('profile-modal');
-const closeProfileModalBtn = document.getElementById('close-profile-modal-btn');
-const profileName = document.getElementById('profile-name');
-const profileEmails = document.getElementById('profile-emails');
-const profileNotes = document.getElementById('profile-notes');
-const profileThreadsContainer = document.getElementById('profile-threads-container');
-
 // Groups Management DOM Elements
 const groupsSidebar = document.getElementById('groups-sidebar');
+const toggleGroupsSidebarBtn = document.getElementById('toggle-groups-sidebar-btn'); // Added
 const groupsListContainer = document.getElementById('groups-list-container');
 const newGroupNameInput = document.getElementById('new-group-name');
 const createGroupBtn = document.getElementById('create-group-btn');
@@ -28,15 +21,29 @@ const globalLoader = document.getElementById('global-loader'); // Added global l
 
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Added toggleGroupsSidebarBtn to critical elements
+    // Removed profile modal elements from criticalElements
     const criticalElements = [
         feedContainer, newEmailBtn, composeModal, composeForm, closeComposeModalBtn, cancelComposeBtn,
-        profileModal, closeProfileModalBtn, profileName, profileEmails, profileNotes, profileThreadsContainer,
-        groupsSidebar, groupsListContainer, newGroupNameInput, createGroupBtn, groupFeedFilterSelect,
-        globalLoader // Check for global loader
+        // profileModal, closeProfileModalBtn, profileName, profileEmails, profileNotes, profileThreadsContainer, // Removed
+        groupsSidebar, toggleGroupsSidebarBtn, groupsListContainer, newGroupNameInput, createGroupBtn, groupFeedFilterSelect,
+        globalLoader
     ];
 
     if (criticalElements.some(el => !el)) {
-        console.error('One or more critical UI elements are missing from the DOM.');
+        // Log which element is missing
+        criticalElements.forEach((el, index) => {
+            if (!el) {
+                const elementName = [
+                    'feedContainer', 'newEmailBtn', 'composeModal', 'composeForm', 'closeComposeModalBtn', 'cancelComposeBtn',
+                    // 'profileModal', 'closeProfileModalBtn', 'profileName', 'profileEmails', 'profileNotes', 'profileThreadsContainer', // Removed
+                    'groupsSidebar', 'toggleGroupsSidebarBtn', 'groupsListContainer', 'newGroupNameInput', 'createGroupBtn', 'groupFeedFilterSelect',
+                    'globalLoader'
+                ][index];
+                console.error(`${elementName} (at index ${index}) is missing from the DOM.`);
+            }
+        });
+        console.error('One or more critical UI elements are missing from the DOM. Check the element list if an index is reported as undefined.');
         if(newEmailBtn) newEmailBtn.disabled = true;
         // Optionally hide the main content area if critical parts are missing
         const mainLayout = document.querySelector('.main-layout');
@@ -50,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadGroups(); // Load groups on page load
     initializeEventListeners();
 });
+
 
 /**
  * Initializes all event listeners for the application.
@@ -188,18 +196,7 @@ function initializeEventListeners() {
         }
     });
 
-    if (closeProfileModalBtn) {
-        closeProfileModalBtn.addEventListener('click', hideProfileModal);
-    }
-
-    // Optional: Close modal if user clicks outside of modal-content
-    if (profileModal) {
-        profileModal.addEventListener('click', (event) => {
-            if (event.target === profileModal) { // Check if the click is on the modal backdrop
-                hideProfileModal();
-            }
-        });
-    }
+    // Removed profile modal event listeners
 
     if (createGroupBtn) {
         createGroupBtn.addEventListener('click', async () => {
@@ -231,6 +228,31 @@ function initializeEventListeners() {
         groupFeedFilterSelect.addEventListener('change', () => {
             const selectedGroupId = groupFeedFilterSelect.value;
             loadFeed({ groupId: selectedGroupId || null }); // Pass null or empty to load all
+        });
+    }
+
+    // Event listener for viewing group details page
+    if (groupsListContainer) {
+        groupsListContainer.addEventListener('click', (event) => {
+            const viewButton = event.target.closest('.view-group-members-btn');
+            if (viewButton && viewButton.dataset.groupId) {
+                const groupId = viewButton.dataset.groupId;
+                window.location.href = `group.php?id=${groupId}`;
+            }
+        });
+    }
+
+    if (toggleGroupsSidebarBtn && groupsSidebar) {
+        toggleGroupsSidebarBtn.addEventListener('click', () => {
+            groupsSidebar.classList.toggle('collapsed');
+            document.querySelector('.main-layout').classList.toggle('sidebar-collapsed');
+
+            // Optional: Change button text/icon based on state
+            if (groupsSidebar.classList.contains('collapsed')) {
+                // toggleGroupsSidebarBtn.textContent = 'Show Groups'; // Example text change
+            } else {
+                // toggleGroupsSidebarBtn.textContent = 'Hide Groups'; // Example text change
+            }
         });
     }
 }
@@ -269,86 +291,19 @@ function hideComposeModal() {
     }
 }
 
-/**
- * Shows the profile modal.
- */
-function showProfileModal() {
-    if (profileModal) {
-        profileModal.style.display = 'block';
-    }
-}
+// Removed showProfileModal and hideProfileModal functions
 
 /**
- * Hides the profile modal.
- */
-function hideProfileModal() {
-    if (profileModal) {
-        profileModal.style.display = 'none';
-        // Optionally clear content if it's sensitive or large
-        profileName.textContent = '';
-        profileEmails.textContent = '';
-        profileNotes.textContent = '';
-        profileThreadsContainer.innerHTML = '';
-    }
-}
-
-/**
- * Fetches and displays a person's profile.
+ * Redirects to a person's profile page.
  * @param {string} personId The ID of the person.
  */
-async function showProfile(personId) {
-    if (!profileModal || !profileName || !profileEmails || !profileNotes || !profileThreadsContainer) {
-        console.error("Profile modal elements not found.");
+function showProfile(personId) { // Removed async as it's no longer fetching data
+    if (!personId) {
+        console.error("Person ID is required to show profile.");
         return;
     }
-
-    showProfileModal();
-    // Clear previous content and show loading message within modal elements
-    profileName.textContent = 'Loading...';
-    profileEmails.textContent = 'Loading...';
-    profileNotes.textContent = 'Loading...';
-    profileThreadsContainer.innerHTML = '<p>Loading threads...</p>';
-    showGlobalLoader(); // Also show global loader for profile fetching
-
-    try {
-        const profileData = await getProfile(personId);
-
-        profileName.textContent = profileData.name || 'N/A';
-        profileEmails.textContent = profileData.email_addresses ? profileData.email_addresses.join(', ') : 'N/A';
-        profileNotes.textContent = profileData.notes || ''; // Show notes if available, otherwise empty
-
-        if (profileData.threads && profileData.threads.length > 0) {
-            profileData.threads.forEach(thread => {
-                const threadSummaryDiv = document.createElement('div');
-                threadSummaryDiv.className = 'profile-thread-summary';
-                // Keep it simple: Subject and Last Reply Time
-                const subjectP = document.createElement('p');
-                subjectP.textContent = `Subject: ${thread.subject || 'No Subject'}`;
-                threadSummaryDiv.appendChild(subjectP);
-
-                if (thread.last_reply_time) {
-                    const lastReplyP = document.createElement('p');
-                    lastReplyP.textContent = `Last Reply: ${new Date(thread.last_reply_time).toLocaleString()}`;
-                    threadSummaryDiv.appendChild(lastReplyP);
-                }
-                // Potentially add a link to the thread itself if desired in future
-                // const link = document.createElement('a');
-                // link.href = `#thread-${thread.thread_id}`; // Example link
-                // link.textContent = "View Thread";
-                // threadSummaryDiv.appendChild(link);
-                profileThreadsContainer.appendChild(threadSummaryDiv);
-            });
-        } else {
-            profileThreadsContainer.innerHTML = '<p>No associated threads found.</p>';
-        }
-
-    } catch (error) {
-        console.error('Error fetching profile:', error);
-        profileName.textContent = 'Error loading profile.';
-        profileThreadsContainer.innerHTML = `<p>Could not load profile data: ${error.message}</p>`;
-    } finally {
-        hideGlobalLoader(); // Hide global loader
-    }
+    // Redirect to the profile page
+    window.location.href = `profile.php?id=${personId}`;
 }
 
 
@@ -366,7 +321,7 @@ async function loadFeed(params = {}) {
     feedContainer.innerHTML = '<p>Loading feed...</p>'; // Specific loader for feed area
 
     try {
-        const response = await getFeed(params);
+        const response = await getFeed(params); // getFeed is in api.js
         const threads = response.threads;
 
         if (!threads || threads.length === 0) {
@@ -375,7 +330,8 @@ async function loadFeed(params = {}) {
         } else {
             feedContainer.innerHTML = ''; // Clear "Loading feed..." message
             threads.forEach(thread => {
-                const threadElement = renderThread(thread, thread.subject);
+                // Ensure renderThread is called from window scope or is otherwise available
+                const threadElement = window.renderThread(thread, thread.subject);
                 feedContainer.appendChild(threadElement);
             });
         }
@@ -448,184 +404,4 @@ async function loadGroups() {
  * Expected structure: { thread_id, subject, participants, last_reply_time, emails: [{ email_id, sender_name, body_preview, timestamp }] }
  * @returns {HTMLElement} A div element representing the thread.
  */
-function renderThread(threadData, threadSubject) { // threadSubject added as parameter
-    const threadDiv = document.createElement('div');
-    threadDiv.className = 'thread';
-    threadDiv.dataset.threadId = threadData.thread_id;
-
-    const subjectH2 = document.createElement('h2');
-    subjectH2.className = 'thread-subject';
-    subjectH2.textContent = threadData.subject || 'No Subject'; // Use threadData.subject for display
-    threadDiv.appendChild(subjectH2);
-
-    if (threadData.participants && threadData.participants.length > 0) {
-        const participantsP = document.createElement('p');
-        participantsP.className = 'thread-participants';
-        participantsP.textContent = 'Participants: ' + threadData.participants.join(', ');
-        threadDiv.appendChild(participantsP);
-    }
-
-    if (threadData.last_reply_time) {
-        const lastReplyP = document.createElement('p');
-        lastReplyP.className = 'thread-last-reply';
-        lastReplyP.textContent = 'Last reply: ' + new Date(threadData.last_reply_time).toLocaleString();
-        threadDiv.appendChild(lastReplyP);
-    }
-
-    const emailsDiv = document.createElement('div');
-    emailsDiv.className = 'thread-emails';
-
-    if (threadData.emails && threadData.emails.length > 0) {
-        threadData.emails.forEach(email => {
-            const emailDiv = document.createElement('div');
-            emailDiv.className = 'email-summary';
-            emailDiv.dataset.emailId = email.email_id;
-
-            // Read/Unread status
-            if (email.hasOwnProperty('is_read') && !email.is_read) {
-                emailDiv.classList.add('email-unread');
-            }
-            // If no is_read property, add a comment for future API integration.
-            // else if (!email.hasOwnProperty('is_read')) {
-            // console.log("Email object does not have 'is_read' property. API might need update.");
-            // }
-
-
-            const senderP = document.createElement('p');
-            senderP.className = 'email-sender';
-            // Wrap sender name in a link/span for profile popup
-            const senderNameSpan = document.createElement('span');
-            senderNameSpan.className = 'sender-link';
-            senderNameSpan.textContent = email.sender_name || 'Unknown Sender';
-            if (email.sender_person_id) {
-                senderNameSpan.dataset.personId = email.sender_person_id;
-            } else {
-                // Add a comment that sender_person_id is missing for this email
-                // console.log("sender_person_id missing for email:", email.email_id);
-                senderNameSpan.classList.add('no-profile'); // Add class to style differently if no ID
-            }
-            senderP.appendChild(document.createTextNode('From: '));
-            senderP.appendChild(senderNameSpan);
-            emailDiv.appendChild(senderP);
-
-            // Placeholder for To, CC, BCC - assuming API might provide these on individual email objects in the future
-            if (email.to_recipients && email.to_recipients.length > 0) {
-                const toP = document.createElement('p');
-                toP.className = 'email-recipients-to';
-                toP.textContent = `To: ${email.to_recipients.join(', ')}`;
-                emailDiv.appendChild(toP);
-            }
-            if (email.cc_recipients && email.cc_recipients.length > 0) {
-                const ccP = document.createElement('p');
-                ccP.className = 'email-recipients-cc';
-                ccP.textContent = `CC: ${email.cc_recipients.join(', ')}`;
-                emailDiv.appendChild(ccP);
-            }
-            // BCC typically not shown to other recipients, but if API provides it for the user's own sent items:
-            // if (email.bcc_recipients && email.bcc_recipients.length > 0) {
-            // const bccP = document.createElement('p');
-            // bccP.className = 'email-recipients-bcc';
-            // bccP.textContent = `BCC: ${email.bcc_recipients.join(', ')}`;
-            // emailDiv.appendChild(bccP);
-            // }
-
-
-            const previewP = document.createElement('p');
-            previewP.className = 'email-preview';
-            previewP.textContent = email.body_preview || 'No preview available.';
-            emailDiv.appendChild(previewP);
-
-            if (email.timestamp) {
-                const timestampP = document.createElement('p');
-                timestampP.className = 'email-timestamp';
-                // Full timestamp format e.g., "Jan 15, 2024, 10:30 AM"
-                timestampP.textContent = new Date(email.timestamp).toLocaleString(undefined, {
-                    year: 'numeric', month: 'short', day: 'numeric',
-                    hour: 'numeric', minute: '2-digit', hour12: true
-                });
-                emailDiv.appendChild(timestampP);
-            }
-
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'email-actions';
-
-            // Reply button
-            const replyBtn = document.createElement('button');
-            replyBtn.className = 'reply-to-email-btn';
-            replyBtn.textContent = 'Reply';
-            replyBtn.dataset.emailId = email.email_id;
-            replyBtn.dataset.subject = threadData.subject || 'No Subject';
-            replyBtn.dataset.sender = email.sender_name || '';
-            // Store full recipient list if available for reply all, defaulting to sender
-            replyBtn.dataset.toRecipients = email.to_recipients ? email.to_recipients.join(',') : (email.sender_name || '');
-            replyBtn.dataset.ccRecipients = email.cc_recipients ? email.cc_recipients.join(',') : '';
-            actionsDiv.appendChild(replyBtn);
-
-            // Reply All button
-            const replyAllBtn = document.createElement('button');
-            replyAllBtn.className = 'reply-all-to-email-btn';
-            replyAllBtn.textContent = 'Reply All';
-            replyAllBtn.dataset.emailId = email.email_id;
-            replyAllBtn.dataset.subject = threadData.subject || 'No Subject';
-            replyAllBtn.dataset.sender = email.sender_name || '';
-             // For Reply All, gather To and CC recipients. BCC are usually not included in a "Reply All".
-            const allRecipients = [];
-            if (email.sender_name) allRecipients.push(email.sender_name); // Original sender
-            if (email.to_recipients) allRecipients.push(...email.to_recipients);
-            if (email.cc_recipients) allRecipients.push(...email.cc_recipients);
-            // Filter out duplicates and current user (if known - not implemented here)
-            const uniqueRecipients = [...new Set(allRecipients)];
-            replyAllBtn.dataset.allRecipients = uniqueRecipients.join(',');
-            actionsDiv.appendChild(replyAllBtn);
-
-            // Forward button
-            const forwardBtn = document.createElement('button');
-            forwardBtn.className = 'forward-email-btn';
-            forwardBtn.textContent = 'Forward';
-            forwardBtn.dataset.emailId = email.email_id; // Useful for fetching full body if needed
-            forwardBtn.dataset.subject = threadData.subject || 'No Subject';
-            forwardBtn.dataset.originalSender = email.sender_name || 'Unknown Sender';
-            forwardBtn.dataset.originalDate = email.timestamp ? new Date(email.timestamp).toLocaleString(undefined, {
-                year: 'numeric', month: 'short', day: 'numeric',
-                hour: 'numeric', minute: '2-digit', hour12: true
-            }) : 'Unknown Date';
-            // Storing the preview here, ideally, you'd fetch the full body for forwarding.
-            forwardBtn.dataset.originalBody = email.body_preview || 'No preview available.';
-            actionsDiv.appendChild(forwardBtn);
-
-            emailDiv.appendChild(actionsDiv);
-
-            // Display Attachments if any
-            if (email.attachments && email.attachments.length > 0) {
-                const attachmentsListDiv = document.createElement('div');
-                attachmentsListDiv.className = 'email-attachments-list';
-
-                const heading = document.createElement('h4'); // Or <p><strong>Attachments:</strong></p>
-                heading.textContent = 'Attachments:';
-                attachmentsListDiv.appendChild(heading);
-
-                email.attachments.forEach(attachment => {
-                    const link = document.createElement('a');
-                    link.href = attachment.url || (attachment.file_id ? `/api/download_attachment.php?file_id=${attachment.file_id}` : '#');
-                    link.textContent = attachment.filename;
-                    // Add download attribute if it's a direct URL or if server sets Content-Disposition
-                    if (attachment.url || attachment.direct_url) { // Assuming direct_url means it might be a direct link
-                        link.setAttribute('download', attachment.filename);
-                    }
-                    link.target = '_blank'; // Open in new tab
-                    attachmentsListDiv.appendChild(link);
-                });
-                emailDiv.appendChild(attachmentsListDiv);
-            }
-
-            emailsDiv.appendChild(emailDiv);
-        });
-    } else {
-        const noEmailsP = document.createElement('p');
-        noEmailsP.textContent = 'No emails in this thread yet.';
-        emailsDiv.appendChild(noEmailsP);
-    }
-    threadDiv.appendChild(emailsDiv);
-
-    return threadDiv;
-}
+// function renderThread moved to api.js and is available as window.renderThread
