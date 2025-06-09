@@ -14,7 +14,7 @@ async function getFeed(userId, params = {}) {
         console.error('getFeed requires a userId.');
         throw new Error('User ID is required to fetch feed.');
     }
-    let url = `../api/get_feed.php?user_id=${encodeURIComponent(userId)}`;
+    let url = `../api/v1/get_feed.php?user_id=${encodeURIComponent(userId)}`;
     if (params.groupId) {
         url += `&group_id=${encodeURIComponent(params.groupId)}`;
     }
@@ -57,7 +57,7 @@ async function getThread(threadId, userId) {
         throw new Error('User ID is required to fetch thread details.');
     }
 
-    const url = `../api/get_thread.php?thread_id=${encodeURIComponent(threadId)}&user_id=${encodeURIComponent(userId)}`;
+    const url = `../api/v1/get_thread.php?thread_id=${encodeURIComponent(threadId)}&user_id=${encodeURIComponent(userId)}`;
 
     try {
         const response = await fetch(url);
@@ -89,7 +89,7 @@ async function getThread(threadId, userId) {
  */
 async function sendEmail(emailData) {
     try {
-        const response = await fetch('../api/send_email.php', {
+        const response = await fetch('../api/v1/send_email.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -126,7 +126,7 @@ async function getProfile(personId) {
         throw new Error("Person ID is required to fetch profile.");
     }
     try {
-        const response = await fetch(`../api/get_profile.php?id=${encodeURIComponent(personId)}`);
+        const response = await fetch(`../api/v1/get_profile.php?id=${encodeURIComponent(personId)}`);
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Error fetching profile:', response.status, response.statusText, errorText);
@@ -147,7 +147,7 @@ async function getProfile(personId) {
  */
 async function getGroups() {
     try {
-        const response = await fetch('../api/get_groups.php');
+        const response = await fetch('../api/v1/get_groups.php');
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Error fetching groups:', response.status, response.statusText, errorText);
@@ -174,7 +174,7 @@ async function getGroupMembers(groupId) {
         throw new Error("Group ID is required to fetch group members.");
     }
     try {
-        const response = await fetch(`../api/get_group_members.php?group_id=${encodeURIComponent(groupId)}`);
+        const response = await fetch(`../api/v1/get_group_members.php?group_id=${encodeURIComponent(groupId)}`);
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Error fetching group members:', response.status, response.statusText, errorText);
@@ -357,7 +357,7 @@ window.renderThread = function(threadData, threadSubject, currentUserId) { // th
                 attachmentsListDiv.appendChild(heading);
                 email.attachments.forEach(attachment => {
                     const link = document.createElement('a');
-                    link.href = attachment.url || (attachment.file_id ? `/api/download_attachment.php?file_id=${attachment.file_id}` : '#');
+                    link.href = attachment.url || (attachment.file_id ? `/api/v1/download_attachment.php?file_id=${attachment.file_id}` : '#');
                     link.textContent = attachment.filename;
                     if (attachment.url || attachment.direct_url) {
                         link.setAttribute('download', attachment.filename);
@@ -393,7 +393,7 @@ async function setPostStatus(emailId, userId, status) {
     }
 
     try {
-        const response = await fetch('../api/set_post_status.php', {
+        const response = await fetch('../api/v1/set_post_status.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
