@@ -8,12 +8,24 @@
 </head>
 <body>
     <div id="global-loader" class="global-loader" style="display:none;">Loading...</div>
-    <header>
-        <h1>Epistol</h1>
+
+    <header id="top-bar">
+        <div class="logo-area">
+            <h1>Epistol</h1>
+        </div>
+        <div class="search-area">
+            <input type="text" placeholder="Search emails..." id="search-field">
+            {_SEARCH_ICON_PLACEHOLDER_}
+        </div>
+        <nav class="navigation-menus">
+            {_MENU_PLACEHOLDER_}
+            <button id="toggle-right-sidebar-btn" style="margin-left: 10px;">Toggle Right Sidebar</button>
+        </nav>
         <button id="new-email-btn">New Email</button>
     </header>
-    <main class="main-layout"> <!- Added a class for flexbox styling -->
-        <aside id="groups-sidebar">
+
+    <div class="main-container">
+        <aside id="left-sidebar" class="sidebar">
             <button id="toggle-groups-sidebar-btn">Toggle Groups</button>
             <h2>Groups</h2>
             <div id="groups-list-container">
@@ -42,10 +54,19 @@
                 </select>
             </div>
         </aside>
-        <div id="feed-container">
-            <!-- Email threads will be loaded here by JavaScript -->
-        </div>
-    </main>
+
+        <main id="main-content">
+            <div id="feed-container">
+                <!-- Email threads will be loaded here by JavaScript -->
+            </div>
+        </main>
+
+        <aside id="right-sidebar" class="sidebar">
+            <h2>Right Sidebar</h2>
+            <p>Placeholder content for the right sidebar. This area can be used for ads, context-sensitive information, or other purposes.</p>
+            {_RIGHT_SIDEBAR_CONTENT_PLACEHOLDER_}
+        </aside>
+    </div>
 
     <!-- Compose Email Modal -->
     <div id="compose-modal" class="modal" style="display: none;">

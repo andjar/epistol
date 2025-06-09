@@ -10,46 +10,54 @@ const composeSubject = document.getElementById('compose-subject');
 const composeBody = document.getElementById('compose-body');
 const composeInReplyTo = document.getElementById('compose-in-reply-to');
 
-// Groups Management DOM Elements
-const groupsSidebar = document.getElementById('groups-sidebar');
-const toggleGroupsSidebarBtn = document.getElementById('toggle-groups-sidebar-btn'); // Added
+// DOM Elements for new layout
+const leftSidebar = document.getElementById('left-sidebar'); // Changed from groupsSidebar
+const rightSidebar = document.getElementById('right-sidebar');
+const searchField = document.getElementById('search-field');
+// Potentially add toggle buttons for sidebars if they exist in HTML
+const toggleLeftSidebarBtn = document.getElementById('toggle-groups-sidebar-btn'); // This is the old toggleGroupsSidebarBtn, now for left-sidebar
+const toggleRightSidebarBtn = document.getElementById('toggle-right-sidebar-btn'); // Hypothetical, might not exist
+
+// Groups Management DOM Elements (mostly within leftSidebar now)
 const groupsListContainer = document.getElementById('groups-list-container');
 const newGroupNameInput = document.getElementById('new-group-name');
 const createGroupBtn = document.getElementById('create-group-btn');
 const groupFeedFilterSelect = document.getElementById('group-feed-filter');
 const statusFeedFilterSelect = document.getElementById('status-feed-filter'); // Added status filter
-const globalLoader = document.getElementById('global-loader'); // Added global loader
+const globalLoader = document.getElementById('global-loader');
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Added toggleGroupsSidebarBtn and statusFeedFilterSelect to critical elements
-    // Removed profile modal elements from criticalElements
     const criticalElements = [
         feedContainer, newEmailBtn, composeModal, composeForm, closeComposeModalBtn, cancelComposeBtn,
-        groupsSidebar, toggleGroupsSidebarBtn, groupsListContainer, newGroupNameInput, createGroupBtn,
-        groupFeedFilterSelect, statusFeedFilterSelect, // Added statusFeedFilterSelect
-        globalLoader
+        leftSidebar, // Changed from groupsSidebar
+        // toggleLeftSidebarBtn is the same as old toggleGroupsSidebarBtn, ensure it's handled
+        groupsListContainer, newGroupNameInput, createGroupBtn,
+        groupFeedFilterSelect, statusFeedFilterSelect,
+        globalLoader, searchField // Added searchField
+        // Optional: rightSidebar, toggleRightSidebarBtn if they become essential
     ];
+     // Check toggleLeftSidebarBtn separately as it's the same as the old toggleGroupsSidebarBtn
+    if (!toggleLeftSidebarBtn) console.warn('toggleLeftSidebarBtn (formerly toggleGroupsSidebarBtn) is missing. Left sidebar may not be collapsible.');
+
 
     if (criticalElements.some(el => !el)) {
-        // Log which element is missing
         criticalElements.forEach((el, index) => {
             if (!el) {
                 const elementName = [
                     'feedContainer', 'newEmailBtn', 'composeModal', 'composeForm', 'closeComposeModalBtn', 'cancelComposeBtn',
-                    'groupsSidebar', 'toggleGroupsSidebarBtn', 'groupsListContainer', 'newGroupNameInput', 'createGroupBtn',
-                    'groupFeedFilterSelect', 'statusFeedFilterSelect', // Added statusFeedFilterSelect
-                    'globalLoader'
+                    'leftSidebar',
+                    'groupsListContainer', 'newGroupNameInput', 'createGroupBtn',
+                    'groupFeedFilterSelect', 'statusFeedFilterSelect',
+                    'globalLoader', 'searchField'
                 ][index];
-                console.error(`${elementName} (at index ${index}) is missing from the DOM.`);
+                console.error(`Critical element: ${elementName} (at index ${index}) is missing from the DOM.`);
             }
         });
-        console.error('One or more critical UI elements are missing from the DOM. Check the element list if an index is reported as undefined.');
-        if(newEmailBtn) newEmailBtn.disabled = true;
-        // Optionally hide the main content area if critical parts are missing
-        const mainLayout = document.querySelector('.main-layout');
-        if (mainLayout) mainLayout.style.display = 'none';
-        // Show a more prominent error to the user
+        console.error('One or more critical UI elements are missing. Application functionality may be compromised.');
+        if (newEmailBtn) newEmailBtn.disabled = true;
+        const mainContainer = document.querySelector('.main-container'); // Updated selector
+        if (mainContainer) mainContainer.style.display = 'none';
         document.body.innerHTML = '<p style="color: red; text-align: center; padding: 20px;">Application Error: Essential UI components are missing. Please contact support.</p>';
         return;
     }
@@ -308,18 +316,75 @@ function initializeEventListeners() {
         });
     }
 
-    if (toggleGroupsSidebarBtn && groupsSidebar) {
-        toggleGroupsSidebarBtn.addEventListener('click', () => {
-            groupsSidebar.classList.toggle('collapsed');
-            document.querySelector('.main-layout').classList.toggle('sidebar-collapsed');
+    // Left Sidebar Toggle (formerly groupsSidebar)
+    if (toggleLeftSidebarBtn && leftSidebar) {
+        toggleLeftSidebarBtn.addEventListener('click', () => {
+            leftSidebar.classList.toggle('collapsed');
+            // The main content area should adjust via CSS flex properties,
+            // so toggling a class on '.main-container' might not be needed if CSS is set up for it.
+            // document.querySelector('.main-container').classList.toggle('left-sidebar-collapsed');
 
             // Optional: Change button text/icon based on state
-            if (groupsSidebar.classList.contains('collapsed')) {
-                // toggleGroupsSidebarBtn.textContent = 'Show Groups'; // Example text change
+            if (leftSidebar.classList.contains('collapsed')) {
+                // toggleLeftSidebarBtn.textContent = 'Show Nav'; // Example
             } else {
-                // toggleGroupsSidebarBtn.textContent = 'Hide Groups'; // Example text change
+                // toggleLeftSidebarBtn.textContent = 'Hide Nav'; // Example
             }
         });
+    }
+
+    // Right Sidebar Toggle (New)
+    if (toggleRightSidebarBtn && rightSidebar) {
+        toggleRightSidebarBtn.addEventListener('click', () => {
+            rightSidebar.classList.toggle('collapsed'); // Or 'hidden' or similar, matching CSS
+            // document.querySelector('.main-container').classList.toggle('right-sidebar-collapsed');
+            // Optional: Change button text/icon
+        });
+    } else if (!toggleRightSidebarBtn && rightSidebar) {
+        console.warn('Right sidebar element exists, but its toggle button (#toggle-right-sidebar-btn) was not found.');
+    }
+
+    // Search Field Interaction (New)
+    if (searchField) {
+        searchField.addEventListener('input', () => {
+            console.log('Search field value:', searchField.value);
+            // Future: Implement actual search/filtering logic here
+            // e.g., loadFeed({ searchQuery: searchField.value });
+        });
+    }
+}
+
+// Global Loader Functions
+function showGlobalLoader() {
+    if (globalLoader) globalLoader.style.display = 'block';
+}
+
+function hideGlobalLoader() {
+    if (globalLoader) globalLoader.style.display = 'none';
+}
+
+/**
+ * Shows the compose email modal.
+ */
+function showComposeModal() {
+    if (composeModal) {
+        composeModal.style.display = 'block';
+    }
+}
+
+/**
+ * Hides the compose email modal and resets the form.
+ */
+function hideComposeModal() {
+    if (composeModal) {
+        composeModal.style.display = 'none';
+        composeForm.reset(); // Reset form fields, including file inputs
+        composeInReplyTo.value = ''; // Ensure hidden field is also cleared
+        // Explicitly clear file input for good measure, though reset() should handle it.
+        const attachmentsInput = document.getElementById('compose-attachments');
+        if (attachmentsInput) {
+            attachmentsInput.value = null;
+        }
     }
 }
 

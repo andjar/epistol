@@ -1,882 +1,664 @@
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; /* Modern system font stack */
-    line-height: 1.6;
-    margin: 0;
-    padding: 0;
-    background-color: #f0f2f5; /* Slightly softer background */
-    color: #1c1e21; /* Standard dark text color */
+/* === CSS Variables === */
+:root {
+    --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --body-bg: #F8F9FA;
+    --top-bar-bg: #FFFFFF;
+    --sidebar-bg: #F1F3F5;
+    --main-content-bg: #FFFFFF;
+    --card-bg: #FFFFFF;
+    --card-border-color: #E0E0E0;
+    --text-color: #212529;
+    --text-color-muted: #6C757D;
+    --primary-color: #007AFF; /* Apple's blue, clean and modern */
+    --primary-color-darker: #0056B3;
+    --accent-color: #34C759; /* Apple's green */
+    --accent-color-darker: #28a745;
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-md: 0 3px 8px rgba(0,0,0,0.07);
 }
 
-/* Global Loader Style */
-.global-loader {
+/* === Global Reset & Base Styles === */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family-sans);
+    line-height: 1.6;
+    margin: 0;
+    padding: 0; /* Padding-top will be added by .main-container to account for fixed top-bar */
+    background-color: var(--body-bg);
+    color: var(--text-color);
+    font-size: 16px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+a:hover {
+    color: var(--primary-color-darker);
+    text-decoration: underline;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* === Layout: Top Bar === */
+#top-bar {
+    background-color: var(--top-bar-bg);
+    height: 60px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
-    background: rgba(255, 255, 255, 0.9); /* Slightly more opaque */
-    z-index: 9999;
-    text-align: center;
-    padding: 15px; /* Increased padding */
-    font-size: 1.25em; /* Slightly larger font */
-    color: #007bff; /* Primary blue */
-    border-bottom: 1px solid #dee2e6; /* Lighter border */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Softer shadow */
-    display: none; /* Ensure it's hidden by default via CSS too */
+    z-index: 1000;
+    border-bottom: 1px solid var(--card-border-color);
+    box-shadow: var(--shadow-sm);
 }
 
+#top-bar .logo-area h1 {
+    font-size: 1.5em;
+    color: var(--text-color);
+    margin: 0;
+}
 
-header {
-    background: #007bff; /* Primary blue */
-    color: #fff;
-    padding: 0.8rem 1rem; /* Adjusted padding */
-    /* text-align: center; Removed, using flex now */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    display: flex; /* For aligning title and button */
-    justify-content: space-between; /* Space between title and button */
+#top-bar .search-area {
+    flex-grow: 0.5; /* Allow it to take some space but not too much */
+    display: flex;
     align-items: center;
 }
 
-header h1 {
-    margin: 0;
-    font-size: 1.8em; /* Slightly larger */
+#search-field {
+    width: 100%;
+    max-width: 400px; /* Max width for search */
+    padding: 8px 12px;
+    font-size: 0.95em;
+    border: 1px solid #DEE2E6; /* Light gray border */
+    border-radius: var(--border-radius-sm);
+    background-color: #F1F3F5; /* Slightly off-white */
+}
+#search-field:focus {
+    background-color: var(--top-bar-bg);
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0,123,255,.25);
+}
+/* Placeholder for search icon if added via CSS */
+#search-field + i {
+    margin-left: -25px; /* Adjust to position icon inside the input */
+    color: var(--text-color-muted);
 }
 
-#new-email-btn { /* Style for the main action button in header */
-    background-color: #28a745; /* Green */
+
+#top-bar .navigation-menus {
+    /* Placeholder styling */
+    margin-left: 20px;
+    color: var(--text-color-muted);
+}
+
+#new-email-btn {
+    background-color: var(--accent-color);
     color: white;
-    padding: 0.6rem 1.2rem; /* Adjusted padding */
+    padding: 0.5rem 1rem;
     border: none;
-    border-radius: 5px; /* Slightly more rounded */
+    border-radius: var(--border-radius-sm);
     cursor: pointer;
-    font-size: 1em; /* Adjusted font size */
-    font-weight: 500; /* Medium weight */
-    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    font-size: 0.9em;
+    font-weight: 500;
+    transition: background-color 0.2s ease-in-out;
 }
-
 #new-email-btn:hover {
-    background-color: #218838; /* Darker green */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-#new-email-btn:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.4); /* Focus ring */
+    background-color: var(--accent-color-darker);
 }
 
-
-/* Standard Button Styling - General */
-button, input[type="submit"], input[type="button"] {
-    padding: 8px 15px; /* Default padding */
-    border: 1px solid transparent; /* Default border */
-    border-radius: 4px; /* Default border-radius */
-    cursor: pointer;
-    font-size: 0.95em; /* Default font size */
-    font-weight: 500; /* Medium weight for buttons */
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, opacity 0.2s ease-in-out;
-    /* Standardize text color for general buttons if needed, or rely on specific styles */
-}
-button:hover, input[type="submit"]:hover, input[type="button"]:hover {
-    opacity: 0.9; /* Slight opacity change on hover for most buttons */
-}
-button:focus, input[type="submit"]:focus, input[type="button"]:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.35); /* Default focus ring, can be overridden */
-}
-button:disabled, input:disabled { /* General disabled style */
-    opacity: 0.65;
-    cursor: not-allowed !important; /* Important to override other cursor styles */
-}
-
-
-/* Make main a flex container to position sidebar and feed */
-.main-layout {
+/* === Layout: Main Container === */
+.main-container {
     display: flex;
-    max-width: 1200px;
-    margin: 25px auto; /* Increased margin */
-    padding: 1.5rem; /* Increased padding */
-    gap: 25px; /* Increased gap */
+    padding-top: 60px; /* Height of the top-bar */
+    min-height: calc(100vh - 60px); /* Ensure it takes at least full viewport height minus top bar */
 }
 
-#groups-sidebar {
-    width: 280px; /* Slightly wider sidebar */
-    background-color: #ffffff; /* White background for sidebar */
-    padding: 20px; /* Increased padding */
-    border-radius: 8px; /* More rounded corners */
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06); /* Softer, more distinct shadow */
-    height: fit-content;
-    transition: width 0.3s ease, padding 0.3s ease; /* Smooth transition for collapse */
+/* === Layout: Sidebars === */
+.sidebar {
+    width: 280px;
+    background-color: var(--sidebar-bg);
+    padding: 20px;
+    height: calc(100vh - 60px); /* Full height minus top bar */
+    overflow-y: auto;
+    border-right: 1px solid var(--card-border-color);
+    transition: width 0.3s ease;
+}
+#left-sidebar {
+    /* Specific styles if any, default is from .sidebar */
+}
+#right-sidebar {
+    width: 240px; /* Can be different from left */
+    border-right: none;
+    border-left: 1px solid var(--card-border-color);
+}
+#right-sidebar h2, #right-sidebar p {
+    color: var(--text-color-muted);
 }
 
-#toggle-groups-sidebar-btn {
+/* Collapsed state for left sidebar (from original JS logic) */
+#left-sidebar.collapsed {
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+}
+#left-sidebar.collapsed > *:not(#toggle-groups-sidebar-btn) {
+    display: none;
+}
+#toggle-groups-sidebar-btn { /* Style for the toggle button */
     display: block;
     width: 100%;
     padding: 10px;
     margin-bottom: 15px;
-    background-color: #6c757d; /* Secondary button color */
+    background-color: var(--text-color-muted);
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--border-radius-sm);
     cursor: pointer;
-    font-size: 0.95em;
+    font-size: 0.9em;
     text-align: center;
 }
-
 #toggle-groups-sidebar-btn:hover {
-    background-color: #5a6268; /* Darker secondary */
-    opacity: 1;
-}
-
-#groups-sidebar.collapsed {
-    width: 0;
-    padding: 0;
-    overflow: hidden; /* Hide content when collapsed */
-}
-
-#groups-sidebar.collapsed > *:not(#toggle-groups-sidebar-btn) {
-    display: none; /* Hide all children except the button */
-}
-
-#groups-sidebar.collapsed #toggle-groups-sidebar-btn {
-    margin: 0; /* Remove margin when sidebar is collapsed */
-    border-radius: 0 4px 4px 0; /* Adjust button corners when collapsed and potentially docked */
-     /* You might want to change the text or use an icon for the button when collapsed */
-    /* For example, position it fixed or absolute to be visible */
-}
-
-/* Ensure the button is still somewhat visible and functional when collapsed.
-   This might need more advanced CSS if the button is to overlay or be fixed.
-   For now, it will collapse with the sidebar but remain clickable if its parent has 0 width.
-   A better approach for a "peek-out" button would be to not set its display to none.
-   Let's adjust the collapsed state to keep the button visible.
-*/
-#groups-sidebar.collapsed #toggle-groups-sidebar-btn {
-    display: block; /* Ensure it's displayed */
-    width: auto; /* Let it size to content or a fixed icon size */
-    padding: 10px; /* Keep padding */
-    /* position: absolute; */ /* Example: if you want it to overlay */
-    /* top: 10px; left: 0; */
-    /* For now, it will be at the top of the 0-width sidebar */
-    /* Consider changing text to an icon for collapsed state */
-}
-#groups-sidebar.collapsed h2,
-#groups-sidebar.collapsed #groups-list-container,
-#groups-sidebar.collapsed #create-group-section,
-#groups-sidebar.collapsed #group-filter-section {
-    display: none;
+    background-color: #5a6268;
 }
 
 
-/* When sidebar is collapsed, the feed container should take up more space */
-.main-layout.sidebar-collapsed #feed-container {
-    /* This assumes #feed-container is a direct child of .main-layout */
-    /* If flex-grow is already 1 on #feed-container, it should expand automatically.
-       No specific rule needed here if #groups-sidebar actually shrinks to 0 width. */
-}
-
-#groups-sidebar h2, #groups-sidebar h3 {
-    color: #0056b3; /* Consistent blue for headings */
-    margin-top: 0;
-    margin-bottom: 15px; /* Increased margin */
-    border-bottom: 1px solid #dee2e6; /* Lighter border */
-    padding-bottom: 10px; /* Increased padding */
-    font-size: 1.3em; /* Larger heading for Groups */
-}
-#groups-sidebar h3 {
-    font-size: 1.15em; /* Slightly smaller for subheadings */
-    color: #0069d9; /* Slightly lighter blue for subheadings */
-}
-
-#groups-list-container {
-    margin-bottom: 25px; /* Increased margin */
-    max-height: 250px;
-    overflow-y: auto;
-    padding-right: 8px; /* Space for scrollbar, if needed */
-}
-
-.group-item {
-    padding: 10px 12px; /* Increased padding */
-    margin-bottom: 8px; /* Increased margin */
-    background-color: #f8f9fa; /* Light background for items */
-    border: 1px solid #e9ecef; /* Lighter border */
-    border-radius: 4px; /* Consistent border-radius */
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
-}
-.group-item:hover {
-    background-color: #eef2f7; /* Hover effect */
-    border-color: #cce0ff;
-}
-
-.group-item span {
+/* === Layout: Main Content === */
+#main-content {
     flex-grow: 1;
-    color: #343a40; /* Darker text for group name */
-    font-weight: 500; /* Medium weight for group names */
+    background-color: var(--main-content-bg);
+    padding: 25px;
+    height: calc(100vh - 60px); /* Full height minus top bar */
+    overflow-y: auto;
 }
-
-.view-group-members-btn {
-    padding: 6px 10px; /* Adjusted padding */
-    font-size: 0.88em; /* Adjusted font size */
-    background-color: #6c757d; /* Secondary button color */
-    color: white;
-    /* border: none; Already in general button */
-    border-radius: 4px; /* Consistent border-radius */
-    /* cursor: pointer; Already in general button */
-    /* transition: background-color 0.2s ease-in-out; Already in general button */
-}
-
-.view-group-members-btn:hover {
-    background-color: #5a6268; /* Darker secondary */
-    opacity: 1; /* Override general hover opacity if needed */
-}
-.view-group-members-btn:focus {
-    box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.4); /* Focus ring */
-}
-
-
-#create-group-section, #group-filter-section {
-    margin-bottom: 25px; /* Increased margin */
-}
-
-#new-group-name, #group-feed-filter {
-    width: calc(100% - 24px); /* Adjusted for padding and border */
-    padding: 10px; /* Standardized padding */
-    margin-bottom: 12px; /* Increased margin */
-    border: 1px solid #ced4da; /* Lighter border */
-    border-radius: 4px; /* Consistent border-radius */
-    font-size: 0.95em;
-    background-color: #fff; /* Ensure white background */
-    color: #495057; /* Standard input text color */
-}
-#new-group-name:focus, #group-feed-filter:focus {
-    border-color: #80bdff; /* Standard focus border color */
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25); /* Standard focus shadow */
-    outline: none;
-}
-select#group-feed-filter { /* Ensure select arrow is visible */
-    appearance: auto;
-    -webkit-appearance: auto;
-    -moz-appearance: auto;
-}
-
-
-#create-group-btn {
-    width: 100%;
-    padding: 10px 15px; /* Standardized button padding */
-    background-color: #28a745; /* Green for create */
-    color: white;
-    /* border: none; Already in general button */
-    border-radius: 4px; /* Consistent border-radius */
-    /* cursor: pointer; Already in general button */
-    font-size: 1em; /* Larger font for primary action */
-    /* transition: background-color 0.2s ease-in-out; Already in general button */
-}
-
-#create-group-btn:hover {
-    background-color: #218838; /* Darker green */
-    opacity: 1; /* Override general hover opacity */
-}
-#create-group-btn:focus {
-    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.4); /* Focus ring */
-}
-#create-group-btn:disabled {
-    background-color: #5cb85c; /* Lighter green when disabled (already in general) */
-    opacity: 0.65; /* Already in general */
-}
-
 
 #feed-container {
-    flex-grow: 1;
-    background: #ffffff; /* White background */
-    padding: 25px; /* Increased padding */
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06); /* Softer, more distinct shadow */
-    border-radius: 8px; /* More rounded corners */
+    /* No specific background needed if #main-content has it */
 }
 
+/* === Email Thread/Card Styling === */
 .thread {
-    border: 1px solid #dee2e6; /* Lighter border */
-    background-color: #ffffff; /* Ensure threads are white if feed-container gets a color */
-    margin-bottom: 25px; /* Increased margin */
-    padding: 20px; /* Increased padding */
-    border-radius: 8px; /* More rounded corners */
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05); /* Subtle shadow for threads */
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border-color);
+    border-radius: var(--border-radius-md);
+    margin-bottom: 20px;
+    padding: 15px 20px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s ease-in-out;
+}
+.thread:hover {
+    box-shadow: var(--shadow-md);
 }
 
 .thread-subject {
-    margin-top: 0;
-    margin-bottom: 10px; /* Added margin */
-    color: #0056b3;
-    font-size: 1.45em; /* Larger subject */
-    font-weight: 600; /* Bolder subject */
+    font-size: 1.15em; /* Minimalistic */
+    font-weight: 600; /* Still clear */
+    color: var(--text-color);
+    margin-bottom: 8px;
 }
 
 .thread-participants {
-    font-size: 0.9em;
-    color: #495057; /* Darker grey */
-    margin-bottom: 10px; /* Increased margin */
+    font-size: 0.85em;
+    color: var(--text-color-muted);
+    margin-bottom: 8px;
+}
+.thread-last-reply {
+    font-size: 0.8em;
+    color: var(--text-color-muted);
+    margin-bottom: 12px;
 }
 
-.thread-last-reply {
-    font-size: 0.85em; /* Slightly larger */
-    color: #6c757d; /* Medium grey */
-    margin-bottom: 15px; /* Increased margin */
+/* Group Indicator Placeholder */
+.thread .group-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--primary-color); /* Example color */
+    margin-right: 8px;
+    vertical-align: middle;
 }
+
 
 .thread-emails {
-    margin-top: 20px; /* Increased margin */
-    padding-left: 20px; /* Increased padding */
-    border-left: 4px solid #007bff; /* Primary blue for emphasis, slightly thicker */
+    margin-top: 15px;
+    padding-left: 15px;
+    border-left: 3px solid #E9ECEF; /* Lighter, more subtle border */
 }
 
 .email-summary {
-    border: 1px solid #e9ecef; /* Lighter border */
-    background-color: #f8f9fa; /* Light background for emails */
-    padding: 15px; /* Increased padding */
-    margin-bottom: 15px; /* Increased margin */
-    border-radius: 6px; /* Slightly more rounded */
+    padding: 12px 0; /* Padding top/bottom, no side padding needed due to .thread-emails */
+    margin-bottom: 10px;
+    border-bottom: 1px dashed #F1F3F5; /* Very subtle separator */
 }
 .email-summary:last-child {
-    margin-bottom: 0; /* Remove margin for the last email in a thread */
+    margin-bottom: 0;
+    border-bottom: none;
 }
 
-
-.email-sender { /* This is now a <p> containing a <span>.sender-link */
-    margin-bottom: 8px; /* Increased margin */
-    color: #343a40; /* Darker text for "From:" part */
-    font-size: 1.05em; /* Overall size for the sender line */
+.email-sender {
+    font-size: 0.95em;
+    margin-bottom: 5px;
 }
-/* .sender-link styles will apply to the actual name */
-
-
-.email-recipients-to, .email-recipients-cc { /* Added for future use if populated */
-    font-size: 0.85em;
-    color: #555;
-    margin-bottom: 3px;
+.email-sender .sender-link { /* Emphasize sender's name */
+    font-weight: 600;
+    color: var(--text-color);
+}
+.email-sender .sender-link:hover {
+    color: var(--primary-color);
 }
 
 
 .email-preview {
-    font-size: 1em; /* Larger preview text */
-    color: #343a40; /* Darker grey for better readability */
-    margin-bottom: 10px; /* Increased margin */
-    line-height: 1.55; /* Improved line height */
+    font-size: 0.9em;
+    color: var(--text-color-muted);
+    margin-bottom: 8px;
+    line-height: 1.5;
 }
 
 .email-timestamp {
-    font-size: 0.8em;
-    color: #6c757d; /* Medium grey */
+    font-size: 0.75em;
+    color: var(--text-color-muted);
     text-align: right;
-    margin-top: 8px; /* Add some space above timestamp */
 }
 
 .email-unread {
-    background-color: #e6f2ff; /* Lighter, more subtle unread blue */
-    border-left-width: 4px; /* Make unread border same as email list border */
-    border-left-color: #0056b3 !important; /* Stronger left border for unread, !important to override .thread-emails border */
-    padding-left: 12px; /* Adjust padding if border width changes */
+    /* More subtle unread indication */
+    border-left-color: var(--primary-color) !important; /* Highlight for thread-emails border */
 }
-
-.email-unread .email-sender .sender-link { /* Target the link inside sender for unread */
-    /* font-weight: bold; sender-link is already bold by default in later styles */
-    color: #0056b3 !important; /* Blue for unread sender/subject */
-}
-.email-unread .thread-subject { /* This might not be directly applicable if subject is outside email-summary */
-    color: #0056b3 !important;
-}
-/* If thread-subject is part of .email-unread, this will apply. Otherwise, it's for other contexts. */
-.thread-subject.email-unread { /* If an entire thread can be unread */
-     color: #0056b3;
+.email-unread .thread-subject,
+.email-unread .email-sender .sender-link {
+    font-weight: bold; /* Default unread emphasis */
+    color: var(--primary-color-darker) !important;
 }
 
 
+/* === General UI Elements: Buttons === */
+button, input[type="submit"], input[type="button"] {
+    padding: 8px 15px;
+    border: 1px solid transparent;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, opacity 0.2s ease-in-out;
+}
+button:focus, input[type="submit"]:focus, input[type="button"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--primary-color), 0.35); /* Use primary color for focus */
+}
+button:disabled, input:disabled {
+    opacity: 0.65;
+    cursor: not-allowed !important;
+}
+
+/* Primary action button style (can be applied with a class e.g. .btn-primary) */
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+.btn-primary:hover {
+    background-color: var(--primary-color-darker);
+}
+
+
+/* Sidebar specific button/input styling */
+#groups-sidebar input[type="text"],
+#groups-sidebar select {
+    width: 100%; /* Full width within sidebar */
+    padding: 10px;
+    margin-bottom: 12px;
+    border: 1px solid #CED4DA;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9em;
+    background-color: var(--main-content-bg); /* White background for inputs */
+}
+#groups-sidebar input[type="text"]:focus,
+#groups-sidebar select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    outline: none;
+}
+
+#groups-sidebar h2, #groups-sidebar h3 {
+    color: var(--text-color);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #DEE2E6; /* Lighter border */
+    font-size: 1.1em;
+}
+#groups-sidebar h3 {
+    font-size: 1em;
+}
+
+#create-group-btn {
+    width: 100%;
+    background-color: var(--accent-color);
+    color: white;
+}
+#create-group-btn:hover {
+    background-color: var(--accent-color-darker);
+}
+
+
+.group-item {
+    padding: 10px;
+    margin-bottom: 8px;
+    background-color: #E9ECEF; /* Slightly darker than sidebar bg */
+    border: 1px solid #DEE2E6;
+    border-radius: var(--border-radius-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s ease-in-out;
+}
+.group-item:hover {
+    background-color: #DFE3E7;
+}
+.group-item span {
+    font-weight: 500;
+}
+.view-group-members-btn { /* Example of secondary button */
+    background-color: var(--text-color-muted);
+    color: white;
+    font-size: 0.8em;
+    padding: 5px 8px;
+}
+.view-group-members-btn:hover {
+    background-color: #5a6268;
+}
+
+
+/* Email Actions Buttons */
 .email-actions {
-    margin-top: 15px; /* Increased margin */
-    padding-top: 10px; /* Increased padding */
-    border-top: 1px solid #e0e0e0; /* Lighter border, was #eee, then #e9ecef */
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #F1F3F5; /* Very light border */
     text-align: right;
 }
-
 .email-actions button {
-    background-color: #007bff; /* Primary blue */
-    color: white;
-    /* border: none; From general */
-    padding: 8px 12px; /* Adjusted padding for action buttons */
-    margin-left: 8px; /* Standardized margin */
-    border-radius: 4px; /* Consistent border-radius */
-    /* cursor: pointer; From general */
-    font-size: 0.9em; /* Slightly smaller for less prominent actions */
-    /* transition from general */
+    background-color: transparent; /* Minimalist */
+    color: var(--primary-color);
+    border: 1px solid transparent; /* No border initially */
+    padding: 6px 10px;
+    margin-left: 8px;
+    font-size: 0.85em;
 }
-
 .email-actions button:hover {
-    background-color: #0056b3; /* Darker blue on hover */
-    opacity: 1; /* Override general for these */
-}
-.email-actions button:disabled {
-    background-color: #6c757d; /* Grey when disabled */
-    opacity: 0.65; /* From general */
+    background-color: #E9ECEF; /* Light background on hover */
+    border-color: #DEE2E6; /* Subtle border on hover */
+    color: var(--primary-color-darker);
 }
 
 
-/* Specific button styling if needed */
-.reply-to-email-btn {
-    /* background-color: #28a745; /* Example: Green */
-}
-/* .reply-to-email-btn:hover { background-color: #1e7e34; } */
-
-.reply-all-to-email-btn {
-    /* background-color: #17a2b8; /* Example: Teal */
-}
-/* .reply-all-to-email-btn:hover { background-color: #117a8b; } */
-
-.forward-email-btn {
-    /* background-color: #ffc107; /* Example: Yellow */
-    /* color: #212529; */
-}
-/* .forward-email-btn:hover { background-color: #d39e00; } */
-
-.sender-link {
-    cursor: pointer;
-    text-decoration: underline;
-    color: #0056b3; /* Same as thread subject for consistency */
-}
-
-.sender-link:hover {
-    color: #003d80;
-    text-decoration: underline; /* Underline on hover */
-}
-
-.sender-link.no-profile {
-    text-decoration: none;
-    cursor: default;
-    color: #343a40; /* Standard text color if no profile */
-    font-weight: bold; /* Still bold */
-}
-
-
-/* Profile Modal Specific Styles */
-#profile-modal .modal-content {
-    max-width: 500px; /* Slightly narrower profile modal */
-    padding: 25px; /* Increased padding */
-}
-
-#profile-name {
-    color: #0056b3; /* Blue for profile name */
-    margin-top: 0;
-    border-bottom: 1px solid #dee2e6; /* Lighter border */
-    padding-bottom: 12px; /* Increased padding */
-    margin-bottom: 20px; /* Increased margin */
-    font-size: 1.6em;
-}
-
-#profile-modal p {
-    margin-bottom: 10px; /* Increased margin */
-    font-size: 1em; /* Slightly larger */
-    color: #495057; /* Darker grey */
-}
-#profile-modal p strong { /* If you add strong tags for labels */
-    color: #343a40;
-}
-
-
-#profile-modal p span { /* This is for the actual data */
-    color: #1c1e21; /* Standard text color */
-    font-weight: normal;
-}
-
-#profile-modal h3 {
-    margin-top: 25px; /* Increased margin */
-    margin-bottom: 12px; /* Increased margin */
-    color: #0056b3; /* Blue for subheading */
-    font-size: 1.2em; /* Slightly larger */
-    border-bottom: 1px solid #dee2e6; /* Lighter border */
-    padding-bottom: 8px; /* Increased padding */
-}
-
-#profile-threads-container {
-    max-height: 250px; /* Adjusted height */
-    overflow-y: auto;
-    border: 1px solid #e9ecef; /* Lighter border */
-    padding: 15px; /* Increased padding */
-    background-color: #f8f9fa; /* Light background */
-    border-radius: 4px; /* Consistent border-radius */
-}
-
-.profile-thread-summary {
-    padding: 10px; /* Increased padding */
-    border-bottom: 1px solid #e0e0e0; /* Lighter dotted border */
-}
-
-.profile-thread-summary:last-child {
-    border-bottom: none;
-}
-
-.profile-thread-summary p {
-    margin: 5px 0; /* Increased margin */
-    font-size: 0.95em; /* Slightly larger */
-    color: #343a40;
-}
-.profile-thread-summary p:last-child {
-    margin-bottom: 0;
-}
-
-
-footer {
-    text-align: center;
-    padding: 1.5rem 1rem; /* Increased padding */
-    margin-top: 30px; /* Increased margin */
-    font-size: 0.9em;
-    color: #6c757d; /* Medium grey */
-    background-color: #e9ecef; /* Light background for footer */
-    border-top: 1px solid #dee2e6; /* Lighter border */
-}
-
-/* Loading and error messages in containers */
-#feed-container p, #groups-list-container p, #profile-threads-container p { /* Apply to all specific loaders */
-    text-align: center;
-    font-style: italic;
-    color: #6c757d; /* Medium grey */
-    padding: 25px; /* Increased padding */
-    font-size: 1.05em;
-}
-
-
-/* Modal Styles Refinements */
+/* === Modals === */
 .modal {
     display: none;
     position: fixed;
-    z-index: 1050; /* Higher z-index for modals */
+    z-index: 1050;
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
     overflow: auto;
-    background-color: rgba(0,0,0,0.5); /* Slightly darker backdrop */
+    background-color: rgba(0,0,0,0.55); /* Darker backdrop */
 }
 
 .modal-content {
-    background-color: #fff; /* Explicit white background */
-    margin: 5% auto; /* Adjusted margin for better centering on larger screens */
-    padding: 25px; /* Increased padding */
-    border: 1px solid #adb5bd; /* Lighter border */
-    width: 90%; /* Responsive width */
-    max-width: 550px; /* Adjusted max-width for compose */
-    border-radius: 8px; /* Consistent border-radius */
+    background-color: var(--main-content-bg);
+    margin: 8% auto; /* Slightly less top margin */
+    padding: 25px;
+    border: none; /* No border, rely on shadow */
+    width: 90%;
+    max-width: 500px; /* Default max width */
+    border-radius: var(--border-radius-md);
     position: relative;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2); /* Softer, more pronounced shadow */
+    box-shadow: var(--shadow-md);
 }
-#profile-modal .modal-content { /* Specific max-width for profile if different */
-    max-width: 500px;
+#compose-modal .modal-content {
+    max-width: 600px; /* Compose modal can be wider */
 }
-
 
 .close-btn {
-    color: #6c757d; /* Medium grey */
-    float: right;
-    font-size: 1.8rem; /* Larger close button */
+    color: var(--text-color-muted);
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 1.6rem;
     font-weight: bold;
-    line-height: 1; /* Ensure proper vertical alignment */
     opacity: 0.7;
-    transition: opacity 0.2s ease-in-out;
 }
-
-.close-btn:hover,
-.close-btn:focus {
-    color: #343a40; /* Darker grey on hover/focus */
+.close-btn:hover, .close-btn:focus {
+    color: var(--text-color);
     text-decoration: none;
     cursor: pointer;
     opacity: 1;
 }
 
-/* Compose Form Refinements */
+/* Compose Form Styling */
 #compose-form div {
-    margin-bottom: 18px; /* Increased margin */
+    margin-bottom: 15px;
 }
-
 #compose-form label {
     display: block;
-    margin-bottom: 6px; /* Increased margin */
-    font-weight: bold;
-    color: #495057; /* Darker grey for labels */
+    margin-bottom: 5px;
+    font-weight: 500; /* Slightly less bold */
+    color: var(--text-color);
+    font-size: 0.9em;
 }
-
 #compose-form input[type="email"],
 #compose-form input[type="text"],
 #compose-form textarea,
-#compose-form input[type="file"] { /* Apply to file input as well */
-    width: calc(100% - 24px); /* Adjusted for padding */
-    padding: 10px; /* Standardized padding */
-    border: 1px solid #ced4da; /* Lighter border */
-    border-radius: 4px; /* Consistent border-radius */
+#compose-form input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #CED4DA;
+    border-radius: var(--border-radius-sm);
     font-size: 0.95em;
-    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    background-color: #fff; /* Ensure inputs have white background */
+    background-color: var(--main-content-bg);
 }
-#compose-form input:focus, #compose-form textarea:focus { /* General focus for form inputs */
-    border-color: #80bdff;
+#compose-form input:focus, #compose-form textarea:focus {
+    border-color: var(--primary-color);
     box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
     outline: none;
 }
-
-
 #compose-form textarea {
+    min-height: 150px;
     resize: vertical;
-    min-height: 120px; /* Minimum height for textarea */
 }
-
-#compose-form input[type="file"] {
-    padding: 8px 10px; /* Adjusted padding for file input */
-    /* background-color: #fff; Already applied above */
-}
-
 #compose-form .form-actions {
     text-align: right;
-    margin-top: 25px; /* Increased margin */
+    margin-top: 20px;
 }
-
-#compose-form button { /* General style for buttons in form actions */
-    padding: 10px 18px; /* Increased padding */
-    /* border: 1px solid transparent; From general button */
-    border-radius: 4px;
-    /* cursor: pointer; From general button */
-    margin-left: 10px;
-    font-size: 1em; /* Larger font for actions */
-    /* transition from general button */
-}
-
 #compose-form button[type="submit"] {
-    background-color: #007bff; /* Primary blue */
+    background-color: var(--primary-color);
     color: white;
-    border-color: #007bff; /* Match background */
 }
 #compose-form button[type="submit"]:hover {
-    background-color: #0056b3;
-    border-color: #0056b3;
-    opacity: 1; /* Override general */
+    background-color: var(--primary-color-darker);
 }
-#compose-form button[type="submit"]:focus {
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5); /* Primary blue focus */
-}
-
-
 #compose-form button[type="button"] { /* Cancel button */
-    background-color: #6c757d; /* Secondary grey */
+    background-color: var(--text-color-muted);
     color: white;
-    border-color: #6c757d;
 }
 #compose-form button[type="button"]:hover {
     background-color: #5a6268;
-    border-color: #545b62;
-    opacity: 1; /* Override general */
-}
-#compose-form button[type="button"]:focus {
-    box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.5); /* Secondary grey focus */
 }
 
-
-/* Email Attachments Display Refinements */
-.email-attachments-list {
-    margin-top: 18px; /* Increased margin */
-    padding: 12px; /* Increased padding */
-    background-color: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 4px;
+/* Footer */
+footer {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    margin-top: auto; /* Pushes footer to bottom if content is short, works with flex container */
+    font-size: 0.85em;
+    color: var(--text-color-muted);
+    background-color: var(--sidebar-bg); /* Match sidebar bg */
+    border-top: 1px solid var(--card-border-color);
 }
 
-.email-attachments-list h4 {
-    margin-top: 0;
-    margin-bottom: 10px; /* Increased margin */
-    font-size: 1em; /* Standardized size */
-    color: #343a40; /* Darker text */
-    font-weight: bold;
-}
-
-.email-attachments-list a {
-    display: inline-block;
-    margin-right: 8px; /* Adjusted margin */
-    margin-bottom: 8px; /* Adjusted margin */
-    text-decoration: none;
-    color: #007bff;
-    padding: 5px 10px; /* Adjusted padding */
-    border: 1px solid #007bff; /* Primary blue border */
-    border-radius: 4px;
-    font-size: 0.9em;
-    background-color: #fff;
-    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
-}
-
-.email-attachments-list a:hover {
-    background-color: #007bff; /* Primary blue background on hover */
-    color: #fff; /* White text on hover */
-    text-decoration: none;
+/* Global Loader */
+.global-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    z-index: 9999;
+    text-align: center;
+    padding: 15px;
+    font-size: 1.2em;
+    color: var(--primary-color);
+    border-bottom: 1px solid var(--card-border-color);
+    box-shadow: var(--shadow-sm);
+    display: none;
 }
 
 
-/* Responsive Adjustments */
-@media (max-width: 992px) { /* Larger breakpoint for sidebar stacking if needed */
-    .main-layout {
-        flex-direction: column;
+/* === Responsive Design === */
+
+/* Medium screens - Tablet layout adjustments */
+@media (max-width: 992px) {
+    #left-sidebar {
+        /* Example: Could be hidden by default and toggled via a button in top-bar */
+        /* For now, let's reduce its width */
+        width: 220px;
     }
-    #groups-sidebar {
-        width: 100% !important; /* Override inline styles from JS if necessary for responsive stacking */
-        padding: 20px !important; /* Restore padding */
-        margin-bottom: 1.5rem; /* Increased margin when stacked */
-        max-height: none; /* Allow full height when stacked if desired, or set a new max */
+    #right-sidebar {
+        width: 200px;
     }
-    #groups-sidebar.collapsed {
-        /* How it should behave when "collapsed" on mobile:
-           Option 1: Still collapses to 0 width. User un-collapses to see it full width.
-           Option 2: "Collapsed" means it's hidden or a toggle reveals it as an overlay.
-           For now, let's assume Option 1: it still tries to go to 0 width.
-           The !important might be problematic if JS directly sets width to 0.
-        */
-        width: 0 !important;
-        padding: 0 !important;
+    #search-field {
+        max-width: 250px;
     }
-    #groups-sidebar.collapsed > *:not(#toggle-groups-sidebar-btn) {
-        display: none !important;
-    }
-    #toggle-groups-sidebar-btn{
-        /* Ensure button is always visible and styled appropriately on mobile */
-    }
-
-    /* If the sidebar is meant to be always full-width on mobile (not collapsible),
-       then the .collapsed styles should be conditional on screen width,
-       or JS should not apply .collapsed on smaller screens.
-       Let's assume collapsibility is desired on all screen sizes for now.
-    */
 }
 
+
+/* Small screens - Mobile layout adjustments */
 @media (max-width: 768px) {
-    header {
-        flex-direction: column; /* Stack header items */
-        padding: 1rem;
+    #top-bar {
+        height: auto; /* Allow wrapping */
+        flex-direction: column;
+        padding: 10px;
+        align-items: flex-start;
     }
-    header h1 {
-        margin-bottom: 0.5rem; /* Space between title and button */
+    #top-bar .logo-area { margin-bottom: 10px; }
+    #top-bar .search-area { width: 100%; margin-bottom: 10px; }
+    #search-field { max-width: 100%; }
+    #top-bar .navigation-menus { margin-left: 0; margin-bottom: 10px; }
+    #new-email-btn { width: 100%; }
+
+    .main-container {
+        flex-direction: column;
+        padding-top: 0; /* Top bar is part of normal flow now */
     }
-    #new-email-btn {
-        width: 100%; /* Full width button on small screens */
-        padding: 0.8rem;
+    #top-bar { position: relative; } /* Unfix top bar */
+
+
+    .sidebar {
+        width: 100% !important; /* Full width */
+        height: auto; /* Auto height */
+        max-height: 40vh; /* Limit height, enable scroll */
+        border-right: none;
+        border-bottom: 1px solid var(--card-border-color);
+    }
+    #right-sidebar {
+        border-left: none;
+        border-bottom: 1px solid var(--card-border-color);
+    }
+
+    #main-content {
+        height: auto; /* Auto height */
+        padding: 15px;
     }
 
     .modal-content {
-        width: 95%; /* Wider modals on very small screens */
-        margin: 2% auto; /* Reduce top margin */
-        padding: 15px; /* Reduce padding */
+        width: 95%;
+        margin: 5% auto;
+        padding: 20px;
     }
-    #compose-form button { /* Stack form action buttons */
+    #compose-form button {
         width: 100%;
         margin-left: 0;
         margin-bottom: 10px;
     }
-    #compose-form button:last-child {
-        margin-bottom: 0;
-    }
+    #compose-form button:last-child { margin-bottom: 0; }
 
-    .email-actions button { /* Stack email action buttons */
-        width: calc(50% - 4px); /* Two buttons per row, with small gap */
-        margin-bottom: 8px;
-        margin-left: 0; /* remove left margin when stacking */
+    .email-actions button {
+        width: calc(50% - 5px);
+        margin: 0 2.5px 5px;
     }
-     /* Ensure buttons are properly spaced in a two-column layout */
-    .email-actions button:nth-child(odd) {
-        margin-right: 4px;
-    }
-    .email-actions button:nth-child(even) {
-        margin-left: 4px;
-    }
-
-
 }
 
 @media (max-width: 480px) {
-    body {
-        font-size: 15px; /* Slightly smaller base font for very small screens */
-    }
-    header h1 {
-        font-size: 1.5em;
-    }
-    .email-actions button { /* Full width buttons in email actions on very small screens */
-        width: 100%;
-        margin-left: 0;
-        margin-right: 0; /* Ensure full width */
-    }
+    body { font-size: 15px; }
+    #main-content { padding: 10px; }
+    .thread { padding: 10px 15px; }
+    .email-actions button { width: 100%; margin: 0 0 8px 0; }
 }
 
-/* === Page Styles for Profile and Group === */
+/* Cleanup of some old specific styles that might conflict */
+header { /* Old header is now #top-bar */
+    /* Styles here are mostly superseded or moved */
+}
+.main-layout { /* Old main container is now .main-container */
+    /* Superseded */
+}
+/* Styles for #groups-sidebar, #feed-container are largely covered by .sidebar, #main-content */
+
+/* Specifics for profile/group pages from old CSS - integrate if needed */
 .page-container {
     max-width: 900px;
     margin: 20px auto;
     padding: 20px;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    background-color: var(--main-content-bg);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-sm);
 }
-
-/* General heading style for H1 within .page-container */
 .page-container h1 {
-    color: #0056b3; /* Dark blue, consistent with other main headings */
-    border-bottom: 1px solid #dee2e6; /* Light gray border */
-    padding-bottom: 10px; /* Spacing below the heading */
-    margin-top: 0; /* Remove default top margin */
-    margin-bottom: 20px; /* Spacing after the heading */
-    font-size: 1.8em; /* Similar to header h1 */
-}
-
-/* Specifically target profile and group page main headers if needed, though the above should cover them */
-#profile-page-name,
-#group-page-name {
-    /* Styles are covered by .page-container h1, but can add specifics here if needed */
-}
-
-
-.page-container .back-link {
-    display: inline-block;
+    color: var(--primary-color-darker);
+    border-bottom: 1px solid var(--card-border-color);
+    padding-bottom: 10px;
     margin-bottom: 20px;
-    color: #007bff; /* Standard link blue */
-    text-decoration: none;
-}
-.page-container .back-link:hover {
-    text-decoration: underline;
+    font-size: 1.6em;
 }
 
-/* Placeholder section styling for both profile and group pages */
-#profile-emails-container,
-#profile-notes-container,
-#profile-threads-container,
-#group-members-container,
-#group-feed-container {
+/* Ensure any remaining old styles are either removed or updated if they conflict.
+   This is a broad refactor, so careful testing is needed. */
+#status-filter-section, #group-filter-section {
     margin-bottom: 20px;
-    padding: 15px;
-    border: 1px solid #e9ecef; /* Light border */
-    border-radius: 4px; /* Rounded corners */
-    background-color: #f8f9fa; /* Light background tint */
 }
 
-/* Styling for headings within these sections */
-#profile-emails-container h2,
-#profile-notes-container h2,
-#profile-threads-container h2,
-#group-members-container h2,
-#group-feed-container h2 {
-    color: #0056b3; /* Consistent blue for subheadings */
-    margin-top: 0;
-    margin-bottom: 10px;
-    font-size: 1.3em; /* Slightly smaller than main page heading */
-    padding-bottom: 5px;
-    border-bottom: 1px solid #e0e0e0;
+select#status-feed-filter, select#group-feed-filter {
+     width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    border: 1px solid #CED4DA;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9em;
+    background-color: var(--main-content-bg);
 }
-
-/* Styling for lists within group members section */
-#group-members-container .members-list {
-    list-style-type: none;
-    padding-left: 0;
-}
-#group-members-container .members-list li {
-    padding: 8px 0;
-    border-bottom: 1px solid #f0f0f0;
-}
-#group-members-container .members-list li:last-child {
-    border-bottom: none;
+select#status-feed-filter:focus, select#group-feed-filter:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    outline: none;
 }
