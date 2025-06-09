@@ -13,9 +13,9 @@ header('Content-Type: application/json');
 try {
     // 2. Input Parameters
     $page = isset($_GET['page']) ? filter_var($_GET['page'], FILTER_VALIDATE_INT, ['options' => ['default' => 1, 'min_range' => 1]]) : 1;
-    $user_id = isset($_GET['user_id']) ? filter_var($_GET['user_id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) : null; // This is users.id
-    $status_filter_val = isset($_GET['status']) && !empty($_GET['status']) ? trim($_GET['status']) : null; // Renamed to avoid conflict
-    $group_id_filter_val = isset($_GET['group_id']) && !empty($_GET['group_id']) ? filter_var($_GET['group_id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) : null;
+    $user_id = isset($_GET['user_id']) ? filter_var($_GET['user_id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) : null;
+    $status_filter = isset($_GET['status']) && !empty($_GET['status']) ? trim($_GET['status']) : null;
+    $group_id_filter = isset($_GET['group_id']) && !empty($_GET['group_id']) ? filter_var($_GET['group_id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) : null;
 
     // Use ITEMS_PER_PAGE from config.php if defined, otherwise fallback to 20.
     $default_limit = defined('ITEMS_PER_PAGE') ? ITEMS_PER_PAGE : 20;
@@ -30,7 +30,7 @@ try {
     if ($user_id === false || $user_id === null || $user_id <= 0) {
         send_json_error('Invalid or missing user_id. User ID must be a positive integer.', 400);
     }
-    if (isset($_GET['group_id']) && !empty($_GET['group_id']) && ($group_id_filter_val === false || $group_id_filter_val <=0)) {
+    if (isset($_GET['group_id']) && !empty($_GET['group_id']) && ($group_id_filter === false || $group_id_filter <=0)) {
          send_json_error('Invalid group_id. Group ID must be a positive integer.', 400);
     }
 
@@ -49,211 +49,158 @@ try {
     // Calculate offset for pagination
     $offset = ($page - 1) * $limit;
 
-    // Base SQL parts
-    $select_sql = "SELECT
+    // Main SQL Query using CTEs
+    $sql = "
+        WITH LatestEmailInThread AS (
+            SELECT
+                e.thread_id,
+                e.id AS email_id,
+                e.subject AS email_subject,
+                SUBSTRING(e.body_text, 1, 100) AS body_preview,
+                e.created_at AS email_timestamp,
+                u.id AS sender_user_id,
+                p.id AS sender_person_id,
+                COALESCE(p.name, u.username) AS sender_name,
+                p.avatar_url AS sender_avatar_url,
+                COALESCE(es.status, 'unread') AS email_status,
+                ROW_NUMBER() OVER(PARTITION BY e.thread_id ORDER BY e.created_at DESC) as rn
+            FROM emails e
+            JOIN users u ON e.user_id = u.id
+            LEFT JOIN persons p ON u.person_id = p.id
+            LEFT JOIN email_statuses es ON e.id = es.email_id AND es.user_id = :current_user_id
+        ),
+        ThreadParticipantsAgg AS (
+            SELECT
+                e.thread_id,
+                GROUP_CONCAT(DISTINCT COALESCE(p.name, u.username)) as participant_names_str
+            FROM emails e
+            JOIN users u ON e.user_id = u.id
+            LEFT JOIN persons p ON u.person_id = p.id
+            GROUP BY e.thread_id
+        )
+        SELECT
             t.id AS thread_id,
             t.subject AS thread_subject,
-            t.last_activity_at AS last_reply_time,
-            e.id AS email_id,
-            e.parent_email_id,
-            e.subject AS email_subject,
-            SUBSTRING(e.body_text, 1, 100) AS body_preview,
-            e.created_at AS email_timestamp,
-            u.id AS sender_user_id,
-            p.id AS sender_person_id,
-            COALESCE(p.name, u.username) AS sender_name,
-            p.avatar_url AS sender_avatar_url,
-            COALESCE(es.status, 'unread') AS email_status";
+            COALESCE(le.email_timestamp, t.last_activity_at) AS last_activity_at, -- Use email timestamp if available
+            le.email_id, 
+            le.email_subject, 
+            le.body_preview, 
+            le.email_timestamp,
+            le.sender_user_id, 
+            le.sender_person_id, 
+            le.sender_name, 
+            le.sender_avatar_url,
+            le.email_status,
+            tp.participant_names_str
+        FROM threads t
+        JOIN LatestEmailInThread le ON t.id = le.thread_id AND le.rn = 1
+        LEFT JOIN ThreadParticipantsAgg tp ON t.id = tp.thread_id
+        WHERE 1=1";
 
-    $from_sql = "FROM threads t
-        JOIN emails e ON t.id = e.thread_id
-        JOIN users u ON e.user_id = u.id
-        LEFT JOIN persons p ON u.person_id = p.id
-        LEFT JOIN email_statuses es ON e.id = es.email_id AND es.user_id = :current_user_id";
+    $bindings = [':current_user_id' => $user_id];
 
-    // WHERE clause construction for the main query
-    // The subquery for paginated_thread_ids determines *which threads* appear on the page.
-    // The outer WHERE clause then filters *emails within those threads*.
-    // This could lead to threads appearing with zero emails if all are filtered out by status.
-
-    $where_conditions = [];
-    $bindings = [ // Bindings for the main query
-        ':current_user_id' => $user_id
-    ];
-
-    // Subquery for paginated thread IDs
-    $paginated_threads_sql_parts = ["SELECT t_inner.id FROM threads t_inner"];
-    $paginated_threads_bindings = [ // Bindings for the subquery
-        ':limit_sub' => $limit,
-        ':offset_sub' => $offset
-    ];
-
-    if ($group_id_filter_val) {
-        $paginated_threads_sql_parts[] = "WHERE t_inner.group_id = :group_id_filter_sub";
-        $paginated_threads_bindings[':group_id_filter_sub'] = $group_id_filter_val;
+    if ($group_id_filter !== null) {
+        $sql .= " AND t.group_id = :group_id_filter";
+        $bindings[':group_id_filter'] = $group_id_filter;
     }
-    // Note: Status filter is not applied to thread pagination for simplicity, matching original behavior mostly.
-    // A more complex status filter on threads would require an EXISTS subquery here.
 
-    $paginated_threads_sql_parts[] = "ORDER BY t_inner.last_activity_at DESC LIMIT :limit_sub OFFSET :offset_sub";
-    $paginated_threads_subquery = implode(" ", $paginated_threads_sql_parts);
-
-    // Execute subquery to get paginated thread IDs
-    $stmt_paginated_ids = $pdo->prepare($paginated_threads_subquery);
-    foreach ($paginated_threads_bindings as $key_sub => $value_sub) {
-        $stmt_paginated_ids->bindValue($key_sub, $value_sub, is_int($value_sub) ? PDO::PARAM_INT : PDO::PARAM_STR);
+    if ($status_filter !== null) {
+        if ($status_filter === 'unread') {
+            $sql .= " AND (le.email_status = 'unread' OR le.email_status IS NULL)";
+        } else {
+            $sql .= " AND le.email_status = :status_filter";
+            $bindings[':status_filter'] = $status_filter;
+        }
     }
-    $stmt_paginated_ids->execute();
-    $paginated_thread_ids = $stmt_paginated_ids->fetchAll(PDO::FETCH_COLUMN);
+    
+    // Ensure thread has at least one email (implicitly handled by JOIN with LatestEmailInThread)
+    // but explicitly checking can be clearer or useful if JOIN type changes.
+    // $sql .= " AND EXISTS (SELECT 1 FROM emails e_check WHERE e_check.thread_id = t.id)";
 
-    // Always run count query for pagination metadata, regardless of whether the current page has threads.
-    $count_sql_parts = ["SELECT COUNT(DISTINCT t.id) FROM threads t"];
-    $count_bindings = [];
 
-    if ($group_id_filter_val) {
-        $count_sql_parts[] = "WHERE t.group_id = :group_id_filter_count";
-        $count_bindings[':group_id_filter_count'] = $group_id_filter_val;
+    // Count Query (must reflect the same filtering logic)
+    $count_sql_outer = "SELECT COUNT(DISTINCT ft.id) FROM (
+        SELECT t_outer.id
+        FROM threads t_outer
+        JOIN (
+            SELECT e_inner.thread_id, e_inner.id AS latest_email_id,
+                   COALESCE(es_inner.status, 'unread') AS latest_email_status,
+                   ROW_NUMBER() OVER(PARTITION BY e_inner.thread_id ORDER BY e_inner.created_at DESC) as rn
+            FROM emails e_inner
+            LEFT JOIN email_statuses es_inner ON e_inner.id = es_inner.email_id AND es_inner.user_id = :current_user_id_count_outer
+        ) le_check ON t_outer.id = le_check.thread_id AND le_check.rn = 1
+        WHERE 1=1";
+
+    $count_bindings_outer = [':current_user_id_count_outer' => $user_id];
+
+    if ($group_id_filter !== null) {
+        $count_sql_outer .= " AND t_outer.group_id = :group_id_filter_count_outer";
+        $count_bindings_outer[':group_id_filter_count_outer'] = $group_id_filter;
     }
-    $count_sql = implode(" ", $count_sql_parts);
-    // Status filter is not applied to total count, maintaining original behavior.
 
-    $count_stmt = $pdo->prepare($count_sql);
-    foreach ($count_bindings as $key_count => $value_count) {
-        $count_stmt->bindValue($key_count, $value_count, is_int($value_count) ? PDO::PARAM_INT : PDO::PARAM_STR);
+    if ($status_filter !== null) {
+        if ($status_filter === 'unread') {
+            $count_sql_outer .= " AND (le_check.latest_email_status = 'unread' OR le_check.latest_email_status IS NULL)";
+        } else {
+            $count_sql_outer .= " AND le_check.latest_email_status = :status_filter_count_outer";
+            $count_bindings_outer[':status_filter_count_outer'] = $status_filter;
+        }
+    }
+    $count_sql_outer .= " ) ft";
+
+
+    $count_stmt = $pdo->prepare($count_sql_outer);
+    foreach ($count_bindings_outer as $key => $value) {
+        $count_stmt->bindValue($key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
     }
     $count_stmt->execute();
     $total_items = (int)$count_stmt->fetchColumn();
     $total_pages = ($limit > 0 && $total_items > 0) ? ceil($total_items / $limit) : 0;
 
-    if (empty($paginated_thread_ids)) {
-        // No threads found for this page, but return accurate pagination.
-        send_json_success([
-            'threads' => [],
-            'pagination' => [
-                'current_page' => $page,
-                'per_page' => $limit,
-                'total_items' => $total_items,
-                'total_pages' => $total_pages
-            ]
-        ]);
-        exit; // Terminate script to prevent multiple responses.
-    }
 
-    // Build placeholder string for IN clause
-    $in_clause_placeholders = implode(',', array_fill(0, count($paginated_thread_ids), '?'));
-    $where_conditions[] = "t.id IN ({$in_clause_placeholders})";
-    // Add paginated thread IDs to the main query bindings
-    // PDO does not directly support binding an array to IN(), so we add them one by one.
-    // The actual values will be passed during execute() by merging.
-
-    // Status filter for emails within the selected threads
-    if ($status_filter_val) {
-        if ($status_filter_val === 'unread') {
-            $where_conditions[] = "(es.id IS NULL OR es.status = 'unread')";
-        } else {
-            $where_conditions[] = "es.status = :status_filter_main";
-            $bindings[':status_filter_main'] = $status_filter_val;
-        }
-    }
-
-    $sql = $select_sql . " " . $from_sql;
-    if (!empty($where_conditions)) {
-        $sql .= " WHERE " . implode(" AND ", $where_conditions);
-    }
-    // Order emails within each thread by their creation time
-    $sql .= " ORDER BY t.last_activity_at DESC, e.created_at ASC;";
+    // Add ordering and pagination to the main query
+    $sql .= " ORDER BY last_activity_at DESC LIMIT :limit OFFSET :offset";
+    $bindings[':limit'] = $limit;
+    $bindings[':offset'] = $offset;
 
     $stmt = $pdo->prepare($sql);
-
-    // Merge main bindings with thread ID placeholders for IN clause
-    $execute_bindings = $bindings;
-    // PDO requires positional placeholders for IN clause to be passed in execute array
-    $i = 1;
-    foreach($paginated_thread_ids as $tid) {
-        // This is incorrect way to handle IN for prepared statements.
-        // Placeholders were already added as '?'. Values should be in execute array.
-        // The $execute_bindings array should just contain $paginated_thread_ids appended.
-    }
-    // Correct way: $execute_bindings = array_merge(array_values($bindings), $paginated_thread_ids);
-    // However, named parameters and positional parameters cannot be mixed.
-    // So, we will use named parameters for thread IDs as well.
-
-    // Rebuild IN clause with named placeholders for thread IDs
-    $in_clause_named_placeholders = [];
-    $thread_id_bindings = [];
-    foreach ($paginated_thread_ids as $idx => $tid_val) {
-        $ph = ":thread_id_in_" . $idx;
-        $in_clause_named_placeholders[] = $ph;
-        $thread_id_bindings[$ph] = $tid_val;
-    }
-    // Update the WHERE clause for t.id IN ()
-    // Find and replace the t.id IN (...) part
-    foreach ($where_conditions as $k_wc => $wc_val) {
-        if (strpos($wc_val, "t.id IN (") === 0) {
-            $where_conditions[$k_wc] = "t.id IN (" . implode(',', $in_clause_named_placeholders) . ")";
-            break;
-        }
-    }
-    $sql = $select_sql . " " . $from_sql . " WHERE " . implode(" AND ", $where_conditions) . " ORDER BY t.last_activity_at DESC, e.created_at ASC;";
-    $stmt = $pdo->prepare($sql); // Re-prepare with new SQL
-    $execute_bindings = array_merge($bindings, $thread_id_bindings);
-
-
-    foreach ($execute_bindings as $key => $value) {
+    foreach ($bindings as $key => $value) {
         $stmt->bindValue($key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
     }
     $stmt->execute();
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 5. Data Processing
+    // 4. Data Processing
     $processed_threads = [];
-    $threads_map = [];
-
     foreach ($results as $row) {
-        $thread_id_val = (int)$row['thread_id'];
-
-        if (!isset($threads_map[$thread_id_val])) {
-            $threads_map[$thread_id_val] = [
-                'thread_id' => $thread_id_val,
-                'subject' => $row['thread_subject'],
-                'participants' => [],
-                'last_reply_time' => $row['last_reply_time'],
-                'emails' => []
-            ];
+        $participants = [];
+        if (!empty($row['participant_names_str'])) {
+            $participants = array_unique(explode(',', $row['participant_names_str']));
         }
 
-        $threads_map[$thread_id_val]['emails'][] = [
-            'email_id' => (int)$row['email_id'],
-            'parent_email_id' => $row['parent_email_id'] ? (int)$row['parent_email_id'] : null,
-            'subject' => $row['email_subject'],
-            'sender_user_id' => (int)$row['sender_user_id'],
-            'sender_person_id' => $row['sender_person_id'] ? (int)$row['sender_person_id'] : null,
-            'sender_name' => $row['sender_name'],
-            'sender_avatar_url' => $row['sender_avatar_url'] ?: '/avatars/default.png',
-            'body_preview' => $row['body_preview'],
-            'timestamp' => $row['email_timestamp'],
-            'status' => $row['email_status']
+        $processed_threads[] = [
+            'thread_id' => (int)$row['thread_id'],
+            'subject' => $row['thread_subject'],
+            'participants' => $participants, // Array of names
+            'last_reply_time' => $row['last_activity_at'], // This is now correctly the latest email's timestamp or thread's last activity
+            'emails' => [ // Emails array will contain only the latest email
+                [
+                    'email_id' => (int)$row['email_id'],
+                    'parent_email_id' => null, // The CTE doesn't fetch parent_email_id for the latest email, adjust if needed
+                    'subject' => $row['email_subject'],
+                    'sender_user_id' => (int)$row['sender_user_id'],
+                    'sender_person_id' => $row['sender_person_id'] ? (int)$row['sender_person_id'] : null,
+                    'sender_name' => $row['sender_name'],
+                    'sender_avatar_url' => $row['sender_avatar_url'] ?: '/avatars/default.png',
+                    'body_preview' => $row['body_preview'],
+                    'timestamp' => $row['email_timestamp'],
+                    'status' => $row['email_status']
+                ]
+            ]
         ];
     }
-    // The rest of the PHP processing for participants and final array structure...
-    // This part is complex and error-prone to change in one go.
-    // The key changes are in SQL and initial data mapping.
 
-    // Populate participants and structure the final array
-    foreach ($threads_map as $thread_id_map_key => $thread_data_map_val) {
-        $participant_names = [];
-        foreach ($thread_data_map_val['emails'] as $email_item) {
-            if (!in_array($email_item['sender_name'], $participant_names)) {
-                $participant_names[] = $email_item['sender_name'];
-            }
-        }
-        // Assigning to a new variable to avoid modifying iterable $threads_map directly if it causes issues
-        $current_thread_processed_data = $thread_data_map_val;
-        $current_thread_processed_data['participants'] = $participant_names;
-        $processed_threads[] = $current_thread_processed_data;
-    }
-
-    // 6. Success Response
+    // 5. Success Response
     $response_data = [
         'threads' => $processed_threads,
         'pagination' => [
