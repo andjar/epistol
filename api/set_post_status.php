@@ -29,7 +29,7 @@ $post_id = $data['post_id'] ?? null;
 $user_id = $data['user_id'] ?? null;
 $status = $data['status'] ?? null;
 
-$allowed_statuses = ['read', 'follow-up', 'important-info'];
+$allowed_statuses = ['read', 'follow-up', 'important-info', 'unread'];
 
 if (empty($post_id) || !is_numeric($post_id)) {
     http_response_code(400);
