@@ -31,6 +31,16 @@
                     <!-- Group options will be populated here -->
                 </select>
             </div>
+            <div id="status-filter-section">
+                <h3>Filter Feed by Status</h3>
+                <select id="status-feed-filter">
+                    <option value="">All Statuses</option>
+                    <option value="read">Read</option>
+                    <option value="unread">Unread</option>
+                    <option value="follow-up">Follow-up</option>
+                    <option value="important-info">Important Info</option>
+                </select>
+            </div>
         </aside>
         <div id="feed-container">
             <!-- Email threads will be loaded here by JavaScript -->

@@ -1,15 +1,30 @@
 /**
  * Fetches the email feed data from the backend API.
  * @param {object} [params={}] - Optional parameters for filtering the feed.
+ * @param {number} userId - The ID of the current user.
+ * @param {object} [params={}] - Optional parameters for filtering the feed.
  * @param {string|null} [params.groupId] - The ID of the group to filter by.
+ * @param {number} [params.page] - Page number for pagination.
+ * @param {number} [params.limit] - Items per page for pagination.
  * @returns {Promise<Object>} A promise that resolves to the feed data (e.g., { threads: [...] }).
  *                            Returns an empty object or throws an error in case of failure.
  */
-async function getFeed(params = {}) {
-    let url = '../api/get_feed.php';
-    if (params.groupId) {
-        url += `?group_id=${encodeURIComponent(params.groupId)}`;
+async function getFeed(userId, params = {}) {
+    if (!userId) {
+        console.error('getFeed requires a userId.');
+        throw new Error('User ID is required to fetch feed.');
     }
+    let url = `../api/get_feed.php?user_id=${encodeURIComponent(userId)}`;
+    if (params.groupId) {
+        url += `&group_id=${encodeURIComponent(params.groupId)}`;
+    }
+    if (params.page) {
+        url += `&page=${encodeURIComponent(params.page)}`;
+    }
+    if (params.limit) {
+        url += `&limit=${encodeURIComponent(params.limit)}`;
+    }
+
     try {
         const response = await fetch(url);
         if (!response.ok) {
@@ -24,6 +39,41 @@ async function getFeed(params = {}) {
         throw error; // Re-throw to be handled by caller
     }
 }
+
+/**
+ * Fetches a single thread's data from the backend API.
+ * @param {string} threadId - The ID of the thread to fetch.
+ * @param {number} userId - The ID of the current user.
+ * @returns {Promise<Object>} A promise that resolves to the thread data.
+ * @throws {Error} If the request fails or userId/threadId is missing.
+ */
+async function getThread(threadId, userId) {
+    if (!threadId) {
+        console.error('getThread requires a threadId.');
+        throw new Error('Thread ID is required to fetch thread details.');
+    }
+    if (!userId) {
+        console.error('getThread requires a userId.');
+        throw new Error('User ID is required to fetch thread details.');
+    }
+
+    const url = `../api/get_thread.php?thread_id=${encodeURIComponent(threadId)}&user_id=${encodeURIComponent(userId)}`;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Error fetching thread:', response.status, response.statusText, errorText);
+            throw new Error(`Failed to fetch thread: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+        return data; // Expects { id, subject, participants, emails: [...] }
+    } catch (error) {
+        console.error('Network error or JSON parsing error fetching thread:', error);
+        throw error;
+    }
+}
+
 
 /**
  * Sends email data to the backend API.
@@ -146,10 +196,11 @@ async function getGroupMembers(groupId) {
  * This function is now globally available via window.renderThread
  * @param {Object} threadData - The thread data object.
  * @param {string} threadSubject - The subject of the parent thread (passed for reply pre-fill).
- * Expected structure: { thread_id, subject, participants, last_reply_time, emails: [{ email_id, sender_name, body_preview, timestamp, sender_person_id, to_recipients, cc_recipients, attachments }] }
+ * Expected structure: { thread_id, subject, participants, last_reply_time, emails: [{ email_id, sender_name, body_preview, timestamp, status, sender_person_id, to_recipients, cc_recipients, attachments }] }
+ * @param {number} currentUserId - The ID of the currently logged-in user, needed for status changes.
  * @returns {HTMLElement} A div element representing the thread.
  */
-window.renderThread = function(threadData, threadSubject) { // threadSubject added as parameter
+window.renderThread = function(threadData, threadSubject, currentUserId) { // threadSubject and currentUserId added
     const threadDiv = document.createElement('div');
     threadDiv.className = 'thread';
     threadDiv.dataset.threadId = threadData.thread_id;
@@ -270,6 +321,34 @@ window.renderThread = function(threadData, threadSubject) { // threadSubject add
 
             emailDiv.appendChild(actionsDiv);
 
+            // Display post status and controls
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'email-status-container';
+
+            const currentStatusSpan = document.createElement('span');
+            currentStatusSpan.className = 'current-post-status';
+            currentStatusSpan.textContent = `Status: ${email.status || 'unread'}`;
+            statusDiv.appendChild(currentStatusSpan);
+
+            const statusSelect = document.createElement('select');
+            statusSelect.className = 'post-status-select';
+            statusSelect.dataset.emailId = email.email_id;
+            // currentUserId will be added to dataset in app.js event listener if needed, or passed to setPostStatus directly
+
+            const statuses = ['read', 'follow-up', 'important-info', 'unread']; // 'unread' can be a way to reset or explicit state
+            statuses.forEach(statusValue => {
+                const option = document.createElement('option');
+                option.value = statusValue;
+                option.textContent = statusValue.charAt(0).toUpperCase() + statusValue.slice(1);
+                if (statusValue === (email.status || 'unread')) {
+                    option.selected = true;
+                }
+                statusSelect.appendChild(option);
+            });
+            statusDiv.appendChild(statusSelect);
+            emailDiv.appendChild(statusDiv);
+
+
             if (email.attachments && email.attachments.length > 0) {
                 const attachmentsListDiv = document.createElement('div');
                 attachmentsListDiv.className = 'email-attachments-list';
@@ -298,3 +377,45 @@ window.renderThread = function(threadData, threadSubject) { // threadSubject add
     threadDiv.appendChild(emailsDiv);
     return threadDiv;
 };
+
+/**
+ * Sets the status for a specific post (email).
+ * @param {string} emailId - The ID of the email/post.
+ * @param {number} userId - The ID of the user.
+ * @param {string} status - The new status to set (e.g., 'read', 'follow-up').
+ * @returns {Promise<Object>} A promise that resolves to the server's response.
+ * @throws {Error} If the request fails.
+ */
+async function setPostStatus(emailId, userId, status) {
+    if (!emailId || !userId || !status) {
+        console.error('setPostStatus requires emailId, userId, and status.');
+        throw new Error('Missing parameters for setting post status.');
+    }
+
+    try {
+        const response = await fetch('../api/set_post_status.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                post_id: emailId, // API expects post_id
+                user_id: userId,
+                status: status,
+            }),
+        });
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+            const errorMessage = responseData.error || `HTTP error ${response.status}`;
+            console.error('Error setting post status:', errorMessage, responseData);
+            throw new Error(errorMessage);
+        }
+        console.log('Post status updated successfully:', responseData);
+        return responseData; // Should include { success: true, message: "..." }
+    } catch (error) {
+        console.error('Network error or JSON parsing error setting post status:', error);
+        throw error.message ? error : new Error('Failed to set post status due to a network or server issue.');
+    }
+}

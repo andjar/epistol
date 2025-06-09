@@ -33,6 +33,15 @@ CREATE TABLE group_members (
     PRIMARY KEY (user_id, group_id) -- Composite primary key
 );
 
+-- Post statuses table
+CREATE TABLE post_statuses (
+    id SERIAL PRIMARY KEY,
+    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for faster lookups
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_email ON users(email);
@@ -41,3 +50,5 @@ CREATE INDEX idx_posts_user_id ON posts(user_id);
 CREATE INDEX idx_posts_group_id ON posts(group_id);
 CREATE INDEX idx_group_members_user_id ON group_members(user_id);
 CREATE INDEX idx_group_members_group_id ON group_members(group_id);
+CREATE INDEX idx_post_statuses_post_id ON post_statuses(post_id);
+CREATE INDEX idx_post_statuses_user_id ON post_statuses(user_id);
