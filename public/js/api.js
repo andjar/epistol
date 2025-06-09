@@ -244,14 +244,14 @@ async setPostStatus(emailId, userId, status) {
  * @param {number} currentUserId - The ID of the currently logged-in user, needed for status changes.
  * @returns {HTMLElement} A div element representing the thread.
  */
-window.renderThread = function(threadData, threadSubject, currentUserId) { // threadSubject and currentUserId added
+window.renderThread = function(threadData, threadSubject, currentUserId) {
     const threadDiv = document.createElement('div');
     threadDiv.className = 'thread';
     threadDiv.dataset.threadId = threadData.thread_id;
 
     const subjectH2 = document.createElement('h2');
     subjectH2.className = 'thread-subject';
-    subjectH2.textContent = threadData.subject || 'No Subject'; // Use threadData.subject for display
+    subjectH2.textContent = threadData.subject || 'No Subject';
     threadDiv.appendChild(subjectH2);
 
     if (threadData.participants && threadData.participants.length > 0) {
@@ -277,8 +277,11 @@ window.renderThread = function(threadData, threadSubject, currentUserId) { // th
             emailDiv.className = 'email-summary';
             emailDiv.dataset.emailId = email.email_id;
 
-            if (email.hasOwnProperty('is_read') && !email.is_read) {
+            // Consider null or undefined status as 'unread' for robustness
+            if (email.status === 'unread' || email.status === null || typeof email.status === 'undefined') {
                 emailDiv.classList.add('email-unread');
+            } else {
+                emailDiv.classList.remove('email-unread');
             }
 
             const senderP = document.createElement('p');

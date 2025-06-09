@@ -230,7 +230,6 @@ function initializeEventListeners() {
                 // However, let's try to update locally first and avoid full reload if not necessary.
                 // If other aspects of the email could change based on status, a reload is safer.
                 // The prompt suggested "a feed reload might be simplest" for now.
-                console.log(`Status for email ${emailId} changed to ${newStatus}. Reloading feed.`);
                 await loadFeed(); // Reload feed with current filters (if any stored globally)
                                   // Or pass currently active group filter if available:
                                   // const selectedGroupId = groupFeedFilterSelect.value;
@@ -387,8 +386,8 @@ async function loadFeed(params = {}) {
     showGlobalLoader(); // Show global loader
     feedContainer.innerHTML = '<p>Loading feed...</p>'; // Specific loader for feed area
 
-    // Define a placeholder userId. In a real app, this would come from authentication.
-    const currentUserId = 1;
+    // Use alice_k's user ID (first user created in test data)
+    const currentUserId = 1; // This should be alice_k's ID since she's the first user created
 
     try {
         // Ensure params is an object.
@@ -405,9 +404,11 @@ async function loadFeed(params = {}) {
             effectiveParams.status = selectedStatus;
         }
 
+
         // getFeed now expects userId as the first argument.
         const response = await api.getFeed(currentUserId, effectiveParams); // Using api.getFeed
-        const threads = response.data ? response.data.threads : response.threads; // Adjust based on actual API response structure from get_feed.php
+
+        const threads = response.data ? response.data.threads : response.threads;
 
         if (!threads || threads.length === 0) {
             let filterMessage = '';
