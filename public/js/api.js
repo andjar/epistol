@@ -1,3 +1,4 @@
+const api = {
 /**
  * Fetches the email feed data from the backend API.
  * @param {object} [params={}] - Optional parameters for filtering the feed.
@@ -9,12 +10,12 @@
  * @returns {Promise<Object>} A promise that resolves to the feed data (e.g., { threads: [...] }).
  *                            Returns an empty object or throws an error in case of failure.
  */
-async function getFeed(userId, params = {}) {
+async getFeed(userId, params = {}) {
     if (!userId) {
         console.error('getFeed requires a userId.');
         throw new Error('User ID is required to fetch feed.');
     }
-    let url = `../api/v1/get_feed.php?user_id=${encodeURIComponent(userId)}`;
+    let url = `/api/v1/get_feed.php?user_id=${encodeURIComponent(userId)}`;
     if (params.groupId) {
         url += `&group_id=${encodeURIComponent(params.groupId)}`;
     }
@@ -38,7 +39,7 @@ async function getFeed(userId, params = {}) {
         console.error('Network error or JSON parsing error fetching feed:', error);
         throw error; // Re-throw to be handled by caller
     }
-}
+},
 
 /**
  * Fetches a single thread's data from the backend API.
@@ -47,7 +48,7 @@ async function getFeed(userId, params = {}) {
  * @returns {Promise<Object>} A promise that resolves to the thread data.
  * @throws {Error} If the request fails or userId/threadId is missing.
  */
-async function getThread(threadId, userId) {
+async getThread(threadId, userId) {
     if (!threadId) {
         console.error('getThread requires a threadId.');
         throw new Error('Thread ID is required to fetch thread details.');
@@ -57,7 +58,7 @@ async function getThread(threadId, userId) {
         throw new Error('User ID is required to fetch thread details.');
     }
 
-    const url = `../api/v1/get_thread.php?thread_id=${encodeURIComponent(threadId)}&user_id=${encodeURIComponent(userId)}`;
+    const url = `/api/v1/get_thread.php?thread_id=${encodeURIComponent(threadId)}&user_id=${encodeURIComponent(userId)}`;
 
     try {
         const response = await fetch(url);
@@ -72,7 +73,7 @@ async function getThread(threadId, userId) {
         console.error('Network error or JSON parsing error fetching thread:', error);
         throw error;
     }
-}
+},
 
 
 /**
@@ -87,9 +88,9 @@ async function getThread(threadId, userId) {
  * @returns {Promise<Object>} A promise that resolves to the server's response data on success.
  * @throws {Error} Throws an error if the request fails or the server returns an error status.
  */
-async function sendEmail(emailData) {
+async sendEmail(emailData) {
     try {
-        const response = await fetch('../api/v1/send_email.php', {
+        const response = await fetch('/api/v1/send_email.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -113,7 +114,7 @@ async function sendEmail(emailData) {
         // If it's a generic network error without a specific message, ensure one is provided.
         throw error.message ? error : new Error('Failed to send email due to a network or server issue.');
     }
-}
+},
 
 /**
  * Fetches a person's profile data from the API.
@@ -121,12 +122,12 @@ async function sendEmail(emailData) {
  * @returns {Promise<Object>} A promise that resolves to the profile data.
  * @throws {Error} If the request fails.
  */
-async function getProfile(personId) {
+async getProfile(personId) {
     if (!personId) {
         throw new Error("Person ID is required to fetch profile.");
     }
     try {
-        const response = await fetch(`../api/v1/get_profile.php?person_id=${encodeURIComponent(personId)}`);
+        const response = await fetch(`/api/v1/get_profile.php?person_id=${encodeURIComponent(personId)}`);
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Error fetching profile:', response.status, response.statusText, errorText);
@@ -138,16 +139,16 @@ async function getProfile(personId) {
         console.error('Network error or JSON parsing error fetching profile:', error);
         throw error;
     }
-}
+},
 
 /**
  * Fetches all groups from the API.
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of group objects.
  * @throws {Error} If the request fails.
  */
-async function getGroups() {
+async getGroups() {
     try {
-        const response = await fetch('../api/v1/get_groups.php');
+        const response = await fetch('/api/v1/get_groups.php');
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Error fetching groups:', response.status, response.statusText, errorText);
@@ -161,7 +162,7 @@ async function getGroups() {
         console.error('Network error or JSON parsing error fetching groups:', error);
         throw error;
     }
-}
+},
 
 /**
  * Fetches members of a specific group from the API.
@@ -169,12 +170,12 @@ async function getGroups() {
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of member objects.
  * @throws {Error} If the request fails.
  */
-async function getGroupMembers(groupId) {
+async getGroupMembers(groupId) {
     if (!groupId) {
         throw new Error("Group ID is required to fetch group members.");
     }
     try {
-        const response = await fetch(`../api/v1/get_group_members.php?group_id=${encodeURIComponent(groupId)}`);
+        const response = await fetch(`/api/v1/get_group_members.php?group_id=${encodeURIComponent(groupId)}`);
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Error fetching group members:', response.status, response.statusText, errorText);
@@ -188,8 +189,51 @@ async function getGroupMembers(groupId) {
         console.error('Network error or JSON parsing error fetching group members:', error);
         throw error;
     }
-}
+},
 
+
+/**
+ * Sets the status for a specific post (email).
+ * @param {string} emailId - The ID of the email/post.
+ * @param {number} userId - The ID of the user.
+ * @param {string} status - The new status to set (e.g., 'read', 'follow-up').
+ * @returns {Promise<Object>} A promise that resolves to the server's response.
+ * @throws {Error} If the request fails.
+ */
+async setPostStatus(emailId, userId, status) {
+    if (!emailId || !userId || !status) {
+        console.error('setPostStatus requires emailId, userId, and status.');
+        throw new Error('Missing parameters for setting post status.');
+    }
+
+    try {
+        const response = await fetch('/api/v1/set_post_status.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                post_id: emailId, // API expects post_id
+                user_id: userId,
+                status: status,
+            }),
+        });
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+            const errorMessage = responseData.error || `HTTP error ${response.status}`;
+            console.error('Error setting post status:', errorMessage, responseData);
+            throw new Error(errorMessage);
+        }
+        console.log('Post status updated successfully:', responseData);
+        return responseData; // Should include { success: true, message: "..." }
+    } catch (error) {
+        console.error('Network error or JSON parsing error setting post status:', error);
+        throw error.message ? error : new Error('Failed to set post status due to a network or server issue.');
+    }
+}
+};
 
 /**
  * Renders a single thread object into an HTML element.
@@ -377,45 +421,3 @@ window.renderThread = function(threadData, threadSubject, currentUserId) { // th
     threadDiv.appendChild(emailsDiv);
     return threadDiv;
 };
-
-/**
- * Sets the status for a specific post (email).
- * @param {string} emailId - The ID of the email/post.
- * @param {number} userId - The ID of the user.
- * @param {string} status - The new status to set (e.g., 'read', 'follow-up').
- * @returns {Promise<Object>} A promise that resolves to the server's response.
- * @throws {Error} If the request fails.
- */
-async function setPostStatus(emailId, userId, status) {
-    if (!emailId || !userId || !status) {
-        console.error('setPostStatus requires emailId, userId, and status.');
-        throw new Error('Missing parameters for setting post status.');
-    }
-
-    try {
-        const response = await fetch('../api/v1/set_post_status.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                post_id: emailId, // API expects post_id
-                user_id: userId,
-                status: status,
-            }),
-        });
-
-        const responseData = await response.json();
-
-        if (!response.ok) {
-            const errorMessage = responseData.error || `HTTP error ${response.status}`;
-            console.error('Error setting post status:', errorMessage, responseData);
-            throw new Error(errorMessage);
-        }
-        console.log('Post status updated successfully:', responseData);
-        return responseData; // Should include { success: true, message: "..." }
-    } catch (error) {
-        console.error('Network error or JSON parsing error setting post status:', error);
-        throw error.message ? error : new Error('Failed to set post status due to a network or server issue.');
-    }
-}

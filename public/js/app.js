@@ -121,7 +121,7 @@ function initializeEventListeners() {
             // e.g. composeTo.disabled = true; composeSubject.disabled = true; etc.
             showGlobalLoader(); // Show global loader for sending
 
-            const result = await sendEmail(formData); // from api.js, now sends FormData
+            const result = await api.sendEmail(formData); // from api.js, now sends FormData
             console.log('Email sent successfully', result);
             hideComposeModal();
             await loadFeed(); // Refresh the feed to show the new email
@@ -262,7 +262,7 @@ function initializeEventListeners() {
                 createGroupBtn.disabled = true;
                 createGroupBtn.textContent = 'Creating...';
                 showGlobalLoader(); // Show loader
-                await createGroup(groupName);
+                await api.createGroup({ name: groupName });
                 newGroupNameInput.value = '';
                 await loadGroups();
             } catch (error) {
@@ -453,7 +453,7 @@ async function loadGroups() {
     groupFeedFilterSelect.appendChild(filterFirstOption); // Add "All Groups" back
 
     try {
-        const groups = await getGroups();
+        const groups = await api.getGroups();
 
         groupsListContainer.innerHTML = '';
         if (!groups || groups.length === 0) {
