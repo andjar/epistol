@@ -3,9 +3,17 @@
 // 1. Include necessary files
 require_once __DIR__ . '/../../src/helpers.php';
 require_once __DIR__ . '/../../src/db.php';
-require_once __DIR__ . '/../../config/config.php'; // For DB_PATH, SMTP settings
+require_once __DIR__ . '/../../config/config.php'; // For DB_PATH, SMTP settings, APP_DOMAIN, STORAGE_PATH_ATTACHMENTS
 require_once __DIR__ . '/../../src/classes/SmtpMailer.php'; // Actual mailer class
-// require_once __DIR__ . '/../../vendor/autoload.php'; // If using libraries like Ramsey UUID for IDs
+
+// Define SENDER_USER_ID for now, replace with actual session/auth user ID later
+if (!defined('SENDER_USER_ID')) {
+    define('SENDER_USER_ID', 1); // Assuming user with ID 1 exists and is the sender
+}
+if (!defined('APP_DOMAIN')) {
+    define('APP_DOMAIN', 'epistol.local'); // Define a default app domain for message IDs
+}
+
 
 // Set default content type
 header('Content-Type: application/json');
@@ -17,7 +25,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 try {
     // 3. Input Parameters (from JSON body)
-    $input_data = json_decode(file_get_contents('php://input'), true);
+    // Check if running in PHPUnit test environment to use mocked input
+    if (getenv('PHPUNIT_RUNNING') === 'true' && isset($GLOBALS['mock_php_input_data'])) {
+        $input_data = json_decode($GLOBALS['mock_php_input_data'], true);
+    } else {
+        $input_data = json_decode(file_get_contents('php://input'), true);
+    }
 
     if (json_last_error() !== JSON_ERROR_NONE) {
         send_json_error('Invalid JSON input: ' . json_last_error_msg(), 400);
@@ -86,120 +99,164 @@ try {
 
     // 5. Database Interaction (Post-Send)
     $pdo = get_db_connection();
-    $user_person_id = DEFAULT_USER_PERSON_ID; // Use defined constant
-    $current_timestamp = date('Y-m-d H:i:s');
-    $new_email_id = "eml_" . bin2hex(random_bytes(16)); // Generate new ID for this email
-    $thread_id = null;
+    $current_time = date('Y-m-d H:i:s'); // More descriptive variable name
+    $email_subject = $subject; // Use validated $subject, may be overridden for replies
 
     $pdo->beginTransaction(); // Start transaction
 
     try {
+        $thread_id = null;
+        $parent_email_id_for_db = null; // For emails.parent_email_id
+
         if ($in_reply_to_email_id) {
-            $stmt = $pdo->prepare("SELECT thread_id FROM emails WHERE id = :in_reply_to_email_id");
-            $stmt->execute([':in_reply_to_email_id' => $in_reply_to_email_id]);
-            $replied_email_thread_info = $stmt->fetch(PDO::FETCH_ASSOC);
-            if (!$replied_email_thread_info) {
+            // This is a reply
+            $parent_email_id_for_db = $in_reply_to_email_id;
+            // Fetch parent email's thread_id and subject (to form "Re: [parent_subject]")
+            $stmt_parent = $pdo->prepare("SELECT thread_id, subject FROM emails WHERE id = :parent_email_id");
+            // Note: The original script used string IDs like "eml_...". The new schema uses SERIAL.
+            // Assuming $in_reply_to_email_id is already an integer ID from the client.
+            // If client sends "eml_...", it needs to be converted or client needs to send integer.
+            // For now, assuming $in_reply_to_email_id is the integer ID.
+            $stmt_parent->execute([':parent_email_id' => $in_reply_to_email_id]);
+            $parent_email_info = $stmt_parent->fetch(PDO::FETCH_ASSOC);
+
+            if (!$parent_email_info) {
                 $pdo->rollBack();
-                send_json_error('Replied-to email not found in the database.', 404);
+                send_json_error('Replied-to email (parent_email_id) not found.', 404);
             }
-            $thread_id = $replied_email_thread_info['thread_id'];
+            $thread_id = $parent_email_info['thread_id'];
+
+            // If the new email's subject is empty or not significantly different, prepend "Re:"
+            if (empty(trim($email_subject)) || stripos($email_subject, "Re: ") !== 0) {
+                $email_subject = "Re: " . $parent_email_info['subject'];
+            }
+
         } else {
-            $thread_id = "thr_" . bin2hex(random_bytes(16)); // Generate new UUID for new thread
-            $stmt = $pdo->prepare("INSERT INTO threads (id, subject, created_by_person_id, last_activity_at) VALUES (:id, :subject, :creator_id, :now)");
-            $stmt->execute([
-                ':id' => $thread_id,
-                ':subject' => $subject, // Use subject of the first email as thread subject
-                ':creator_id' => $user_person_id,
-                ':now' => $current_timestamp
+            // This is a new thread
+            $stmt_insert_thread = $pdo->prepare(
+                "INSERT INTO threads (subject, created_by_user_id, created_at, last_activity_at)
+                 VALUES (:subject, :creator_id, :created_at, :last_activity_at)"
+            );
+            $stmt_insert_thread->execute([
+                ':subject' => $email_subject, // Use subject of the first email as thread subject
+                ':creator_id' => SENDER_USER_ID,
+                ':created_at' => $current_time,
+                ':last_activity_at' => $current_time
             ]);
+            $thread_id = $pdo->lastInsertId(); // Get the new thread ID (SERIAL)
         }
 
-        $message_id_header_value = "<" . $new_email_id . "@" . APP_DOMAIN . ">";
+        // Insert the new email
+        $message_id_header_value = "<" . bin2hex(random_bytes(16)) . "@" . APP_DOMAIN . ">"; // Generate a unique message ID
+
         $stmt_insert_email = $pdo->prepare(
-            "INSERT INTO emails (id, thread_id, from_person_id, subject, body_html, body_text, timestamp, is_read, message_id_header)
-             VALUES (:id, :thread_id, :from_person_id, :subject, :body_html, :body_text, :timestamp, :is_read, :message_id_header)"
+            "INSERT INTO emails (thread_id, parent_email_id, user_id, subject, body_html, body_text, created_at, message_id_header)
+             VALUES (:thread_id, :parent_email_id, :user_id, :subject, :body_html, :body_text, :created_at, :message_id_header)"
         );
         $stmt_insert_email->execute([
-            ':id' => $new_email_id,
             ':thread_id' => $thread_id,
-            ':from_person_id' => $user_person_id, // The sender of the email
-            ':subject' => $subject,
+            ':parent_email_id' => $parent_email_id_for_db,
+            ':user_id' => SENDER_USER_ID, // The sender of the email (from users.id)
+            ':subject' => $email_subject,
             ':body_html' => $body_html,
             ':body_text' => $body_text,
-            ':timestamp' => $current_timestamp,
-            ':is_read' => true, // Sent by user, so marked as read for them
+            ':created_at' => $current_time,
             ':message_id_header' => $message_id_header_value
         ]);
+        $new_email_id = $pdo->lastInsertId(); // Get the new email ID (SERIAL)
 
-        // Handle recipients
+        // Add status for the sender (e.g., 'sent' or 'read')
+        $stmt_add_status = $pdo->prepare(
+            "INSERT INTO email_statuses (email_id, user_id, status, created_at)
+             VALUES (:email_id, :user_id, :status, :created_at)"
+        );
+        $stmt_add_status->execute([
+            ':email_id' => $new_email_id,
+            ':user_id' => SENDER_USER_ID,
+            ':status' => 'sent', // Or 'read' as the sender has "seen" it. 'sent' seems more appropriate.
+            ':created_at' => $current_time
+        ]);
+
+        // Handle recipients (adapted for new schema with SERIAL IDs)
         foreach ($recipient_emails as $r_email_address_str) {
-            // Find or create person
-            $stmt_find_person = $pdo->prepare("SELECT id FROM persons WHERE primary_email_address = :email_address");
-            $stmt_find_person->execute([':email_address' => $r_email_address_str]);
-            $person_info = $stmt_find_person->fetch(PDO::FETCH_ASSOC);
             $recipient_person_id = null;
-
-            if ($person_info) {
-                $recipient_person_id = $person_info['id'];
-            } else {
-                $recipient_person_id = "psn_" . bin2hex(random_bytes(16));
-                $stmt_create_person = $pdo->prepare("INSERT INTO persons (id, name, primary_email_address) VALUES (:id, :name, :email_address)");
-                // For simplicity, using email address as name if name not otherwise known
-                $stmt_create_person->execute([
-                    ':id' => $recipient_person_id,
-                    ':name' => $r_email_address_str,
-                    ':email_address' => $r_email_address_str
-                ]);
-            }
-
-            // Find or create email_address record
-            $stmt_find_email_addr = $pdo->prepare("SELECT id FROM email_addresses WHERE person_id = :person_id AND email_address = :email_address");
-            $stmt_find_email_addr->execute([':person_id' => $recipient_person_id, ':email_address' => $r_email_address_str]);
-            $email_addr_info = $stmt_find_email_addr->fetch(PDO::FETCH_ASSOC);
             $recipient_email_address_id = null;
+
+            // Check if email_address exists
+            $stmt_find_email_addr = $pdo->prepare("SELECT id, person_id FROM email_addresses WHERE email_address = :email_address");
+            $stmt_find_email_addr->execute([':email_address' => $r_email_address_str]);
+            $email_addr_info = $stmt_find_email_addr->fetch(PDO::FETCH_ASSOC);
 
             if ($email_addr_info) {
                 $recipient_email_address_id = $email_addr_info['id'];
+                $recipient_person_id = $email_addr_info['person_id']; // Might be null if not linked
             } else {
-                $recipient_email_address_id = "emladr_" . bin2hex(random_bytes(16));
-                $stmt_create_email_addr = $pdo->prepare("INSERT INTO email_addresses (id, person_id, email_address) VALUES (:id, :person_id, :email_address)");
-                $stmt_create_email_addr->execute([
-                    ':id' => $recipient_email_address_id,
-                    ':person_id' => $recipient_person_id,
-                    ':email_address' => $r_email_address_str
+                // Email address does not exist, so person likely doesn't either (or isn't linked this way)
+                // Create person first (optional, could be an unpersoned email address)
+                // For simplicity, creating a person for each new email address.
+                $stmt_create_person = $pdo->prepare("INSERT INTO persons (name, created_at) VALUES (:name, :created_at)");
+                $stmt_create_person->execute([
+                    ':name' => $r_email_address_str, // Use email as name for simplicity
+                    ':created_at' => $current_time
                 ]);
+                $recipient_person_id = $pdo->lastInsertId();
+
+                // Create email_address record
+                $stmt_create_email_addr = $pdo->prepare(
+                    "INSERT INTO email_addresses (person_id, email_address, is_primary, created_at)
+                     VALUES (:person_id, :email_address, :is_primary, :created_at)"
+                );
+                $stmt_create_email_addr->execute([
+                    ':person_id' => $recipient_person_id,
+                    ':email_address' => $r_email_address_str,
+                    ':is_primary' => true, // First email for this person, mark as primary
+                    ':created_at' => $current_time
+                ]);
+                $recipient_email_address_id = $pdo->lastInsertId();
             }
+
+            // If person_id was found but is NULL from email_addresses, and we want to ensure a person exists:
+            if (!$recipient_person_id) {
+                 // This case implies an email_address record exists without a person_id, which is allowed by schema.
+                 // Decide if we should create a person here or leave person_id null for the recipient.
+                 // For now, let's assume we want to link to a person if possible, or create one if the email is new.
+                 // The logic above already creates a person if email_addr_info is false.
+                 // If email_addr_info is true but person_id is null, we might want to create a person and update email_addresses.
+                 // This part can be complex. Current logic: new email -> new person & new email_address. Existing email_address -> use its person_id.
+            }
+
 
             // Insert into email_recipients
             $stmt_insert_recipient = $pdo->prepare(
                 "INSERT INTO email_recipients (email_id, email_address_id, person_id, type)
                  VALUES (:email_id, :email_address_id, :person_id, :type)"
             );
+            // Note: person_id in email_recipients can be NULL if we don't have a corresponding person record.
             $stmt_insert_recipient->execute([
                 ':email_id' => $new_email_id,
                 ':email_address_id' => $recipient_email_address_id,
-                ':person_id' => $recipient_person_id, // Can be null if person not known/created, but we try to create.
-                ':type' => 'to' // Assuming 'to' for now. CC/BCC would need more input fields.
+                ':person_id' => $recipient_person_id,
+                ':type' => 'to' // Assuming 'to'. CC/BCC would need more input fields.
             ]);
         }
 
         // Handle attachments: save to disk and insert into attachments table
         if (!empty($processed_attachments_for_mailer)) {
             if (!file_exists(STORAGE_PATH_ATTACHMENTS) && !is_dir(STORAGE_PATH_ATTACHMENTS)) {
-                if (!mkdir(STORAGE_PATH_ATTACHMENTS, 0755, true)) {
+                if (!mkdir(STORAGE_PATH_ATTACHMENTS, 0755, true)) { // Added recursive true
                      error_log("Failed to create attachment directory: " . STORAGE_PATH_ATTACHMENTS);
-                     throw new Exception("Failed to create attachment directory.");
+                     throw new Exception("Failed to create attachment directory."); // Will be caught by transaction rollback
                 }
             }
 
             foreach ($processed_attachments_for_mailer as $att) {
-                $attachment_id = "att_" . bin2hex(random_bytes(16));
-                // Sanitize filename and ensure uniqueness to prevent overwrites and path traversal
-                $safe_filename = preg_replace("/[^a-zA-Z0-9._-]/", "_", basename($att['filename']));
+                // Sanitize filename and ensure uniqueness
+                $safe_filename = preg_replace("/[^a-zA-Z0-9._-]/", "", basename($att['filename']));
                 $file_extension = pathinfo($safe_filename, PATHINFO_EXTENSION);
                 $base_filename = pathinfo($safe_filename, PATHINFO_FILENAME);
-                $unique_filename_on_disk = $base_filename . "_" . bin2hex(random_bytes(8)) . "." . $file_extension;
-                $filepath_on_disk = STORAGE_PATH_ATTACHMENTS . '/' . $unique_filename_on_disk;
+                // Make filename unique on disk to prevent collision. Store this unique name.
+                $unique_filename_on_disk = $base_filename . "_" . bin2hex(random_bytes(8)) . ($file_extension ? "." . $file_extension : "");
+                $filepath_on_disk = STORAGE_PATH_ATTACHMENTS . DIRECTORY_SEPARATOR . $unique_filename_on_disk;
 
                 if (file_put_contents($filepath_on_disk, $att['content']) === false) {
                     error_log("Failed to save attachment to disk: " . $filepath_on_disk);
@@ -207,35 +264,44 @@ try {
                 }
 
                 $stmt_insert_attachment = $pdo->prepare(
-                    "INSERT INTO attachments (id, email_id, filename, mimetype, filepath_on_disk, filesize_bytes)
-                     VALUES (:id, :email_id, :filename, :mimetype, :filepath_on_disk, :filesize_bytes)"
+                    "INSERT INTO attachments (email_id, filename, mimetype, filesize_bytes, filepath_on_disk, created_at)
+                     VALUES (:email_id, :filename, :mimetype, :filesize_bytes, :filepath_on_disk, :created_at)"
                 );
                 $stmt_insert_attachment->execute([
-                    ':id' => $attachment_id,
                     ':email_id' => $new_email_id,
                     ':filename' => $att['filename'], // Original filename for display
                     ':mimetype' => $att['mimetype'],
-                    ':filepath_on_disk' => $unique_filename_on_disk, // Store only relative path or unique name
-                    ':filesize_bytes' => strlen($att['content'])
+                    ':filesize_bytes' => strlen($att['content']),
+                    ':filepath_on_disk' => $unique_filename_on_disk, // Store only the unique name, not full path
+                    ':created_at' => $current_time
                 ]);
+                // $pdo->lastInsertId() for attachment ID if needed elsewhere, but not currently.
             }
         }
 
         // Update last_activity_at for the thread
         $stmt_update_thread_activity = $pdo->prepare("UPDATE threads SET last_activity_at = :now WHERE id = :thread_id");
-        $stmt_update_thread_activity->execute([':now' => $current_timestamp, ':thread_id' => $thread_id]);
+        $stmt_update_thread_activity->execute([':now' => $current_time, ':thread_id' => $thread_id]);
 
         $pdo->commit(); // Commit transaction
-    } catch (Exception $db_exception) {
+    } catch (PDOException $db_exception) { // Changed variable name for clarity
         if ($pdo && $pdo->inTransaction()) {
             $pdo->rollBack();
         }
         // If attachments were saved to disk before DB error, they are now orphaned.
         // A more robust system might schedule them for cleanup.
         // For now, just log and rethrow or send error.
-        error_log("Database transaction failed in send_email.php: " . $db_exception->getMessage());
-        throw $db_exception; // Rethrow to be caught by the outer general exception handler
+        error_log("Database transaction failed in send_email.php: " . $db_exception->getMessage() . "\nTrace: " . $db_exception->getTraceAsString());
+        // Do not rethrow generic Exception, handle it as a PDOException for consistency if it's from DB
+        send_json_error('A database error occurred during the send operation. Details: ' . $db_exception->getMessage(), 500);
+    } catch (Exception $e) { // Catch other specific exceptions like failed file writes for attachments
+        if ($pdo && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log("General error during send_email.php DB operations: " . $e->getMessage() . "\nTrace: " . $e->getTraceAsString());
+        send_json_error('An error occurred during the send operation: ' . $e->getMessage(), 500);
     }
+
 
     // 6. Success Response
     send_json_success([

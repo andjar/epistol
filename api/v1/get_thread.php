@@ -11,10 +11,9 @@
  * GET
  *
  * Input Parameters ($_GET):
- *  - thread_id (string, required): The ID of the thread to fetch.
- *  - user_id (string, required): The ID of the user requesting the thread. This is used
- *                                 to determine the status of emails (e.g., read/unread)
- *                                 for this specific user.
+ *  - thread_id (int, required): The ID of the thread to fetch (from threads.id).
+ *  - user_id (int, required): The ID of the user requesting the thread (from users.id). This is used
+ *                             to determine the status of emails (e.g., read/unread) for this specific user.
  *
  * Outputs:
  *
@@ -23,28 +22,32 @@
  *  {
  *    "status": "success",
  *    "data": {
- *      "id": "thr_abc123",
+ *      "id": 123, // Integer thread_id
  *      "subject": "Important Discussion",
  *      "participants": [
- *        {"id": "psn_sender1", "name": "Sender One", "avatar_url": "/avatars/sender1.png"},
- *        {"id": "psn_user123", "name": "Current User", "avatar_url": "/avatars/user123.png"}
- *        // ... other participants derived from email senders and current user
+ *        {"id": 1, "user_id": 101, "name": "Sender One", "avatar_url": "/avatars/sender1.png"}, // person_id, user_id
+ *        {"id": 2, "user_id": 102, "name": "Current User", "avatar_url": "/avatars/user123.png"}
  *      ],
  *      "emails": [
  *        {
- *          "id": "eml_xyz789",
+ *          "id": 789, // Integer email_id
+ *          "parent_email_id": null, // or integer parent_email_id
+ *          "subject": "Re: Important Discussion", // Email's own subject
  *          "sender": {
- *            "id": "psn_sender1",
+ *            "id": 1, // Integer person_id (nullable)
+ *            "user_id": 101, // Integer user_id
  *            "name": "Sender One",
  *            "avatar_url": "/avatars/sender1.png"
  *          },
  *          "body_html": "<p>Hello world!</p>",
  *          "body_text": "Hello world!",
- *          "timestamp": "YYYY-MM-DD HH:MM:SS",
+ *          "timestamp": "YYYY-MM-DD HH:MM:SS", // from emails.created_at
  *          "status": "read", // Status for the requesting user_id
- *          "attachments": [] // Placeholder, currently not fetching attachments
+ *          "attachments": [
+ *            {"id": 1, "filename": "doc.pdf", "mimetype": "application/pdf", "filesize_bytes": 12345}
+ *          ]
  *        },
- *        // ... more emails in the thread, sorted by timestamp
+ *        // ... more emails in the thread, sorted by created_at ASC
  *      ]
  *    }
  *  }
@@ -60,12 +63,12 @@
  *    JSON Response: {"status": "error", "message": "Database error..."} or {"status": "error", "message": "Unexpected error..."}
  *
  * Database Interaction:
- * - Fetches the thread's subject from the 'threads' table.
+ * - Fetches the thread's subject from the 'threads' table using its integer ID.
  * - Fetches all emails associated with the 'thread_id' from the 'emails' table.
- * - For each email, joins with 'persons' to get sender details.
- * - Left joins with 'post_statuses' to determine the email status for the 'current_person_id'.
- * - Derives a list of participants from the senders of emails within the thread and includes the current user.
- *   (A more robust participant list might come from a dedicated 'thread_participants' table if available).
+ * - For each email, joins with 'users' and then 'persons' to get sender details (name, avatar).
+ * - Left joins with 'email_statuses' to determine the email status for the current 'user_id'.
+ * - Fetches attachments for each email from the 'attachments' table.
+ * - Derives a list of unique participants from the senders of emails within the thread.
  */
 
 // 1. Include necessary files
@@ -82,29 +85,22 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 try {
     // 2. Input Parameters
-    if (!isset($_GET['thread_id']) || empty(trim($_GET['thread_id']))) {
-        send_json_error('Valid thread_id is required.', 400);
+    if (!isset($_GET['thread_id']) || !filter_var($_GET['thread_id'], FILTER_VALIDATE_INT)) {
+        send_json_error('Valid integer thread_id is required.', 400);
     }
-    $thread_id = trim($_GET['thread_id']);
+    $thread_id = (int)$_GET['thread_id'];
 
-    // Assuming user_id is person_id for context (e.g. post_status)
-    $current_person_id = null;
-    if (isset($_GET['user_id'])) {
-        $current_person_id = trim($_GET['user_id']);
-        if (empty($current_person_id)) {
-            send_json_error('User ID (person_id) cannot be empty if provided.', 400);
-        }
-    } else {
-        send_json_error('User ID (person_id) is required for context.', 400);
+    if (!isset($_GET['user_id']) || !filter_var($_GET['user_id'], FILTER_VALIDATE_INT)) {
+        send_json_error('Valid integer user_id is required for context.', 400);
     }
-
+    $current_user_id = (int)$_GET['user_id']; // This is users.id
 
     // 3. Database Interaction
     $pdo = get_db_connection();
 
     // Fetch Thread Metadata (Subject)
-    $stmt_thread_meta = $pdo->prepare("SELECT subject FROM threads WHERE thread_id = :thread_id");
-    $stmt_thread_meta->bindParam(':thread_id', $thread_id);
+    $stmt_thread_meta = $pdo->prepare("SELECT subject FROM threads WHERE id = :thread_id");
+    $stmt_thread_meta->bindParam(':thread_id', $thread_id, PDO::PARAM_INT);
     $stmt_thread_meta->execute();
     $thread_info = $stmt_thread_meta->fetch(PDO::FETCH_ASSOC);
 
@@ -112,23 +108,28 @@ try {
         send_json_error('Thread not found.', 404);
     }
 
-    // Fetch Emails in Thread with Senders and Post Status
+    // Fetch Emails in Thread with Senders and Email Status
     $sql_emails = "
         SELECT
-            e.email_id AS email_id,
+            e.id AS email_id,
+            e.parent_email_id,
+            e.subject AS email_subject,
             e.body_html,
             e.body_text,
             e.created_at AS timestamp,
-            COALESCE(ps.status, 'unread') AS post_status,
-            p.person_id AS sender_id,
-            p.name AS sender_name,
+            COALESCE(es.status, 'unread') AS email_status,
+            u.id AS sender_user_id,
+            p.id AS sender_person_id,
+            COALESCE(p.name, u.username) AS sender_name, -- Fallback to username if person.name is NULL
             p.avatar_url AS sender_avatar_url
         FROM
             emails e
         JOIN
-            persons p ON e.from_person_id = p.person_id
+            users u ON e.user_id = u.id
         LEFT JOIN
-            post_statuses ps ON e.email_id = ps.post_id AND ps.user_id = :current_person_id
+            persons p ON u.person_id = p.id
+        LEFT JOIN
+            email_statuses es ON e.id = es.email_id AND es.user_id = :current_user_id
         WHERE
             e.thread_id = :thread_id
         ORDER BY
@@ -136,57 +137,70 @@ try {
     ";
 
     $stmt_emails = $pdo->prepare($sql_emails);
-    $stmt_emails->bindParam(':thread_id', $thread_id);
-    $stmt_emails->bindParam(':current_person_id', $current_person_id);
+    $stmt_emails->bindParam(':thread_id', $thread_id, PDO::PARAM_INT);
+    $stmt_emails->bindParam(':current_user_id', $current_user_id, PDO::PARAM_INT);
     $stmt_emails->execute();
     $email_rows = $stmt_emails->fetchAll(PDO::FETCH_ASSOC);
 
-    // Process emails
+    // Process emails and fetch attachments
     $emails_array = [];
-    $participant_ids_map = [];
+    $participant_ids_map = []; // Using sender_person_id as key if available, else sender_user_id
+
+    $stmt_attachments = $pdo->prepare("SELECT id, filename, mimetype, filesize_bytes FROM attachments WHERE email_id = :email_id ORDER BY filename ASC");
 
     foreach ($email_rows as $row) {
+        $email_id_int = (int)$row['email_id'];
+
+        // Fetch attachments for this email
+        $stmt_attachments->bindParam(':email_id', $email_id_int, PDO::PARAM_INT);
+        $stmt_attachments->execute();
+        $attachment_rows = $stmt_attachments->fetchAll(PDO::FETCH_ASSOC);
+        $attachments_array = array_map(function($att_row) {
+            return [
+                'id' => (int)$att_row['id'],
+                'filename' => $att_row['filename'],
+                'mimetype' => $att_row['mimetype'],
+                'filesize_bytes' => (int)$att_row['filesize_bytes']
+            ];
+        }, $attachment_rows);
+
+        $sender_person_id_val = $row['sender_person_id'] ? (int)$row['sender_person_id'] : null;
+        $sender_user_id_val = (int)$row['sender_user_id'];
+
         $emails_array[] = [
-            "id" => $row['email_id'],
+            "id" => $email_id_int,
+            "parent_email_id" => $row['parent_email_id'] ? (int)$row['parent_email_id'] : null,
+            "subject" => $row['email_subject'],
             "sender" => [
-                "id" => $row['sender_id'],
+                "id" => $sender_person_id_val,
+                "user_id" => $sender_user_id_val,
                 "name" => $row['sender_name'],
                 "avatar_url" => $row['sender_avatar_url'] ?: '/avatars/default.png'
             ],
             "body_html" => $row['body_html'],
             "body_text" => $row['body_text'],
             "timestamp" => $row['timestamp'],
-            "status" => $row['post_status'],
-            "attachments" => []
+            "status" => $row['email_status'],
+            "attachments" => $attachments_array
         ];
-        if (!isset($participant_ids_map[$row['sender_id']])) {
-            $participant_ids_map[$row['sender_id']] = [
-                'id' => $row['sender_id'],
+
+        // Use person_id for participants map if available, otherwise user_id
+        $participant_key = $sender_person_id_val ?? 'user_' . $sender_user_id_val;
+        if (!isset($participant_ids_map[$participant_key])) {
+            $participant_ids_map[$participant_key] = [
+                'id' => $sender_person_id_val, // persons.id (can be null)
+                'user_id' => $sender_user_id_val, // users.id (always present for a sender)
                 'name' => $row['sender_name'],
                 'avatar_url' => $row['sender_avatar_url'] ?: '/avatars/default.png'
             ];
         }
     }
 
-    if (!isset($participant_ids_map[$current_person_id])) {
-        $stmt_user = $pdo->prepare("SELECT person_id, name, avatar_url FROM persons WHERE person_id = :person_id");
-        $stmt_user->bindParam(':person_id', $current_person_id);
-        $stmt_user->execute();
-        $user_details = $stmt_user->fetch(PDO::FETCH_ASSOC);
-        if ($user_details) {
-             $participant_ids_map[$user_details['person_id']] = [
-                'id' => $user_details['person_id'],
-                'name' => $user_details['name'],
-                'avatar_url' => $user_details['avatar_url'] ?: '/avatars/default.png'
-            ];
-        }
-    }
     $participants_array = array_values($participant_ids_map);
-
 
     // Data Processing and Response
     $response_data = [
-        "id" => $thread_id,
+        "id" => $thread_id, // Integer
         "subject" => $thread_info['subject'],
         "participants" => $participants_array,
         "emails" => $emails_array

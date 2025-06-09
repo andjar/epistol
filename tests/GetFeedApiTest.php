@@ -1,219 +1,174 @@
 <?php
 
-use PHPUnit\Framework\TestCase;
+require_once __DIR__ . '/BaseApiTest.php';
 
-// It's good practice to have a BaseTestCase that handles DB setup.
-// For now, repeating some logic.
-// require_once __DIR__ . '/BaseApiTestCase.php';
-
-class GetFeedApiTest extends TestCase
+class GetFeedApiTest extends BaseApiTest
 {
-    private static $pdo;
-
-    public static function setUpBeforeClass(): void
-    {
-        // This setup assumes that config.php will be included by the API script
-        // and DB_PATH will be defined. Tests run on this DB.
-        // Ideally, use a separate test DB configuration.
-        require_once __DIR__ . '/../config/config.php'; // To define DB_PATH etc.
-        require_once __DIR__ . '/../src/db.php';      // For get_db_connection()
-        require_once __DIR__ . '/../db/inject_test_data.php'; // For inject_initial_data
-
-        // Ensure a clean state by deleting and recreating the DB
-        if (defined('DB_PATH')) {
-            if (file_exists(DB_PATH)) {
-                unlink(DB_PATH);
-            }
-            self::$pdo = get_db_connection(); // This will create schema and run inject_initial_data
-        } else {
-            throw new \Exception("DB_PATH is not defined. Ensure config.php is loaded.");
-        }
-    }
+    private $testUserIds = [];
+    private $testPersonIds = [];
+    private $testThreadIds = [];
+    private $testEmailIds = [];
+    private $testGroupIds = [];
 
     protected function setUp(): void
     {
-        // Clear post_statuses before each test for this API
-        self::$pdo->exec("DELETE FROM post_statuses;");
-        // Data from inject_initial_data.php is assumed to be:
-        // Users: user1 (id=1), user2 (id=2)
-        // Emails: email1 (id=1, thread_id=1, from_person_id=1 (user1's person_id)), email2 (id=2, thread_id=1, from_person_id=2), email3 (id=3, thread_id=2, from_person_id=1)
-        // Groups: group1 (id=1)
-        // EmailGroups: email1 in group1, email2 in group1
-        // We need to map users to person_ids based on inject_test_data.php
-        // Let's assume person_id for user1 is 'person_user1_id' and for user2 is 'person_user2_id'
-        // And post_id in post_statuses corresponds to email_id from the feed.
+        parent::setUp();
     }
 
-    private function captureOutputAndHeaders(callable $callback, &$http_response_code) {
-        ob_start();
-        $callback();
-        $output = ob_get_clean();
-        // Note: Can't directly get http_response_code set by script without more complex setup.
-        // We'll infer based on JSON error presence.
-        return $output;
-    }
-
-    private function makeApiCall(array $params)
+    protected function tearDown(): void
     {
-        $_GET = $params;
-        $_SERVER['REQUEST_METHOD'] = 'GET';
-        // $_SERVER['QUERY_STRING'] = http_build_query($params);
+        // Order of deletion matters
+        $this->executeSql("DELETE FROM email_statuses WHERE email_id IN (" . implode(',', array_map('intval', $this->testEmailIds)) . ")");
+        $this->executeSql("DELETE FROM emails WHERE id IN (" . implode(',', array_map('intval', $this->testEmailIds)) . ")", $this->testEmailIds);
+        $this->executeSql("DELETE FROM threads WHERE id IN (" . implode(',', array_map('intval', $this->testThreadIds)) . ")", $this->testThreadIds);
+        $this->executeSql("DELETE FROM groups WHERE id IN (" . implode(',', array_map('intval', $this->testGroupIds)) . ")", $this->testGroupIds);
 
-        return $this->captureOutputAndHeaders(function () {
-            require __DIR__ . '/../api/get_feed.php';
-        }, $http_response_code);
+        $this->executeSql("UPDATE users SET person_id = NULL WHERE id IN (" . implode(',', array_map('intval', $this->testUserIds)) . ")");
+        $this->executeSql("DELETE FROM persons WHERE id IN (" . implode(',', array_map('intval', $this->testPersonIds)) . ")", $this->testPersonIds);
+        $this->executeSql("DELETE FROM users WHERE id IN (" . implode(',', array_map('intval', array_filter($this->testUserIds, fn($id) => $id > 0))) . ")", array_filter($this->testUserIds, fn($id) => $id > 0));
+
+        $this->testUserIds = [];
+        $this->testPersonIds = [];
+        $this->testThreadIds = [];
+        $this->testEmailIds = [];
+        $this->testGroupIds = [];
+        parent::tearDown();
     }
 
-    public function testMissingUserIdParameter()
+    private function createTestUserWithPerson(string $usernameSuffix, &$userId, &$personId)
     {
-        $output = $this->makeApiCall([]); // No user_id
-        $response = json_decode($output, true);
-        $this->assertArrayHasKey('error', $response);
-        $this->assertStringContainsString('Invalid or missing user_id', $response['error']);
+        $personName = "Test Person " . $usernameSuffix;
+        $this->executeSql("INSERT INTO persons (name, avatar_url) VALUES (?, ?)", [$personName, "/avatars/test{$usernameSuffix}.png"]);
+        $personId = $this->getLastInsertId();
+        $this->testPersonIds[] = $personId;
+
+        $email = "user{$usernameSuffix}@example.com";
+        $this->executeSql(
+            "INSERT INTO users (username, email, password_hash, person_id, created_at) VALUES (?, ?, ?, ?, datetime('now'))",
+            ["user{$usernameSuffix}", $email, password_hash("password", PASSWORD_DEFAULT), $personId]
+        );
+        $userId = $this->getLastInsertId();
+        $this->testUserIds[] = $userId;
     }
 
-    public function testPostStatusPresenceAndDefault()
-    {
-        // Assuming user1 (person_id from user1) has email1 (id=1) and email3 (id=3)
-        // User ID 1 for these tests will correspond to the user who owns person_user1_id
-        $output = $this->makeApiCall(['user_id' => 1]);
-        $response = json_decode($output, true);
-
-        $this->assertArrayHasKey('data', $response);
-        $this->assertArrayHasKey('threads', $response['data']);
-        $this->assertNotEmpty($response['data']['threads']);
-
-        $foundEmail1 = false;
-        $foundEmail3 = false;
-        foreach ($response['data']['threads'] as $thread) {
-            foreach ($thread['emails'] as $email) {
-                $this->assertArrayHasKey('status', $email);
-                $this->assertEquals('unread', $email['status'], "Email ID {$email['email_id']} should default to unread.");
-                if ($email['email_id'] == 1) $foundEmail1 = true;
-                if ($email['email_id'] == 3) $foundEmail3 = true;
-            }
-        }
-        $this->assertTrue($foundEmail1, "Email 1 not found in feed for user 1.");
-        $this->assertTrue($foundEmail3, "Email 3 not found in feed for user 1.");
+    private function createGroup(string $name, int $creatorId): int {
+        $this->executeSql("INSERT INTO groups (name, created_by_user_id, created_at) VALUES (?, ?, datetime('now'))", [$name, $creatorId]);
+        $groupId = $this->getLastInsertId();
+        $this->testGroupIds[] = $groupId;
+        return $groupId;
     }
 
-    public function testFilterByReadStatus()
-    {
-        // Set email1 to 'read' for user_id 1
-        self::$pdo->exec("INSERT INTO post_statuses (post_id, user_id, status) VALUES (1, 1, 'read')");
-        // email3 for user_id 1 remains unread
-
-        $output = $this->makeApiCall(['user_id' => 1, 'status' => 'read']);
-        $response = json_decode($output, true);
-        $this->assertArrayHasKey('data', $response);
-
-        $emailsInResponse = [];
-        if(isset($response['data']['threads'])) {
-            foreach ($response['data']['threads'] as $thread) {
-                foreach ($thread['emails'] as $email) {
-                    $emailsInResponse[$email['email_id']] = $email;
-                }
-            }
-        }
-
-        $this->assertArrayHasKey(1, $emailsInResponse, "Email 1 (marked read) should be in the filtered response.");
-        $this->assertEquals('read', $emailsInResponse[1]['status']);
-        $this->assertArrayNotHasKey(3, $emailsInResponse, "Email 3 (unread) should NOT be in the 'read' filtered response.");
-        // Also check that email 2 (belonging to user 2) is not there.
-        $this->assertArrayNotHasKey(2, $emailsInResponse, "Email 2 (other user) should not be in user 1's feed.");
+    private function createThread(string $subject, int $creatorId, ?int $groupId, string $lastActivityAt): int {
+        $this->executeSql(
+            "INSERT INTO threads (subject, created_by_user_id, group_id, created_at, last_activity_at) VALUES (?, ?, ?, datetime('now'), ?)",
+            [$subject, $creatorId, $groupId, $lastActivityAt]
+        );
+        $threadId = $this->getLastInsertId();
+        $this->testThreadIds[] = $threadId;
+        return $threadId;
     }
 
-    public function testFilterByUnreadStatus()
-    {
-        // email1 for user_id 1 is 'read'
-        self::$pdo->exec("INSERT INTO post_statuses (post_id, user_id, status) VALUES (1, 1, 'read')");
-        // email3 for user_id 1 has no entry in post_statuses, so it's 'unread' by default.
-        // email_id 4 (for user 1) explicitly 'unread'
-        self::$pdo->exec("INSERT OR IGNORE INTO emails (id, thread_id, from_person_id, subject, body_text, body_html, timestamp, snippet) VALUES (4, 2, 'person_user1_id', 'Subj4', 'Body4', '<p>Body4</p>', '2023-01-04 10:00:00', 'Snip4')");
-        self::$pdo->exec("INSERT INTO post_statuses (post_id, user_id, status) VALUES (4, 1, 'unread')");
-
-
-        $output = $this->makeApiCall(['user_id' => 1, 'status' => 'unread']);
-        $response = json_decode($output, true);
-        $this->assertArrayHasKey('data', $response);
-
-        $emailsInResponse = [];
-        if(isset($response['data']['threads'])) {
-            foreach ($response['data']['threads'] as $thread) {
-                foreach ($thread['emails'] as $email) {
-                    $emailsInResponse[$email['email_id']] = $email;
-                }
-            }
-        }
-
-        $this->assertArrayNotHasKey(1, $emailsInResponse, "Email 1 (read) should not be in 'unread' filter.");
-        $this->assertArrayHasKey(3, $emailsInResponse, "Email 3 (no status entry) should be in 'unread' filter.");
-        $this->assertEquals('unread', $emailsInResponse[3]['status']);
-        $this->assertArrayHasKey(4, $emailsInResponse, "Email 4 (explicitly unread) should be in 'unread' filter.");
-        $this->assertEquals('unread', $emailsInResponse[4]['status']);
+    private function createEmail(int $threadId, int $userId, string $subject, string $createdAt, ?int $parentId = null, ?int $groupId = null): int {
+        $body = "Body for email " . $subject;
+        $this->executeSql(
+            "INSERT INTO emails (thread_id, user_id, subject, body_text, body_html, created_at, parent_email_id, group_id, message_id_header) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [$threadId, $userId, $subject, $body, "<p>$body</p>", $createdAt, $parentId, $groupId, "<msg".uniqid()."@test.com>"]
+        );
+        $emailId = $this->getLastInsertId();
+        $this->testEmailIds[] = $emailId;
+        return $emailId;
     }
 
-    public function testFilterByFollowUpStatus()
+    private function setEmailStatus(int $emailId, int $userId, string $status) {
+        $this->executeSql("INSERT INTO email_statuses (email_id, user_id, status, created_at) VALUES (?, ?, ?, datetime('now'))", [$emailId, $userId, $status]);
+    }
+
+
+    public function testGetFeedPaginationAndOrder()
     {
-        self::$pdo->exec("INSERT INTO post_statuses (post_id, user_id, status) VALUES (1, 1, 'follow-up')");
-        self::$pdo->exec("INSERT INTO post_statuses (post_id, user_id, status) VALUES (3, 1, 'read')");
+        $this->createTestUserWithPerson("FeedUser", $user1Id, $person1Id);
+        $groupId1 = $this->createGroup("Group Alpha", $user1Id);
 
-        $output = $this->makeApiCall(['user_id' => 1, 'status' => 'follow-up']);
-        $response = json_decode($output, true);
-        $this->assertArrayHasKey('data', $response);
+        // Create threads with varying last_activity_at
+        $thread1Id = $this->createThread("Thread 1", $user1Id, $groupId1, '2024-01-01 10:00:00'); // oldest
+        $this->createEmail($thread1Id, $user1Id, "Email T1E1", '2024-01-01 10:00:00');
 
-        $emailsInResponse = [];
-        if(isset($response['data']['threads'])) {
-            foreach ($response['data']['threads'] as $thread) {
-                foreach ($thread['emails'] as $email) {
-                    $emailsInResponse[$email['email_id']] = $email;
-                }
-            }
-        }
-        $this->assertArrayHasKey(1, $emailsInResponse, "Email 1 (follow-up) should be in the filtered response.");
-        $this->assertEquals('follow-up', $emailsInResponse[1]['status']);
-        $this->assertArrayNotHasKey(3, $emailsInResponse, "Email 3 (read) should NOT be in the 'follow-up' filtered response.");
+        $thread2Id = $this->createThread("Thread 2", $user1Id, null, '2024-01-01 12:00:00'); // newest
+        $this->createEmail($thread2Id, $user1Id, "Email T2E1", '2024-01-01 12:00:00');
+
+        $thread3Id = $this->createThread("Thread 3", $user1Id, $groupId1, '2024-01-01 11:00:00'); // middle
+        $this->createEmail($thread3Id, $user1Id, "Email T3E1", '2024-01-01 11:00:00');
+
+        // Scenario 1: No filters, page 1, limit 2
+        $response = $this->executeApiScript('get_feed.php', 'GET', ['user_id' => $user1Id, 'page' => 1, 'limit' => 2]);
+        $this->assertEquals(200, $response['code'], "Raw: {$response['raw_output']}");
+        $this->assertEquals('success', $response['body']['status']);
+        $this->assertCount(2, $response['body']['data']['threads']);
+        $this->assertEquals($thread2Id, $response['body']['data']['threads'][0]['thread_id'], "Thread 2 (newest) should be first.");
+        $this->assertEquals($thread3Id, $response['body']['data']['threads'][1]['thread_id'], "Thread 3 (middle) should be second.");
+        $this->assertEquals(3, $response['body']['data']['pagination']['total_items']);
+        $this->assertEquals(2, $response['body']['data']['pagination']['total_pages']);
+
+        // Scenario 1: No filters, page 2, limit 2
+        $response = $this->executeApiScript('get_feed.php', 'GET', ['user_id' => $user1Id, 'page' => 2, 'limit' => 2]);
+        $this->assertEquals(200, $response['code']);
+        $this->assertCount(1, $response['body']['data']['threads']);
+        $this->assertEquals($thread1Id, $response['body']['data']['threads'][0]['thread_id'], "Thread 1 (oldest) should be on page 2.");
+
+        // Scenario 2: Filter by group_id
+        $response = $this->executeApiScript('get_feed.php', 'GET', ['user_id' => $user1Id, 'page' => 1, 'limit' => 2, 'group_id' => $groupId1]);
+        $this->assertEquals(200, $response['code']);
+        $this->assertCount(2, $response['body']['data']['threads']); // T3 then T1
+        $this->assertEquals($thread3Id, $response['body']['data']['threads'][0]['thread_id']);
+        $this->assertEquals($thread1Id, $response['body']['data']['threads'][1]['thread_id']);
+        $this->assertEquals(2, $response['body']['data']['pagination']['total_items']);
+        $this->assertEquals(1, $response['body']['data']['pagination']['total_pages']);
     }
 
     public function testCombinedGroupAndStatusFilter()
     {
-        // Assuming from inject_test_data.php:
-        // Email 1 (id=1) is in group1 (group_id=1), by user1 (person_user1_id)
-        // Email 3 (id=3) is NOT in any group, by user1
-        // Email 5 (id=5, new) by user1, in group1
-        self::$pdo->exec("INSERT OR IGNORE INTO emails (id, thread_id, from_person_id, subject, body_text, body_html, timestamp, snippet, group_id) VALUES (5, 2, 'person_user1_id', 'Subj5', 'Body5', '<p>Body5</p>', '2023-01-05 10:00:00', 'Snip5', 1)");
+        $this->createTestUserWithPerson("ComboUser", $user1Id, $person1Id);
+        $groupId1 = $this->createGroup("Combo Group", $user1Id);
 
-        // Statuses for user_id 1:
-        // Email 1: read
-        // Email 3: follow-up
-        // Email 5: read
-        self::$pdo->exec("INSERT INTO post_statuses (post_id, user_id, status) VALUES (1, 1, 'read')");
-        self::$pdo->exec("INSERT INTO post_statuses (post_id, user_id, status) VALUES (3, 1, 'follow-up')");
-        self::$pdo->exec("INSERT INTO post_statuses (post_id, user_id, status) VALUES (5, 1, 'read')");
+        // Thread 1 (in group1)
+        $thread1Id = $this->createThread("Combo T1", $user1Id, $groupId1, '2024-01-02 10:00:00');
+        $email1T1 = $this->createEmail($thread1Id, $user1Id, "Email1 T1", '2024-01-02 09:00:00'); // Read
+        $email2T1 = $this->createEmail($thread1Id, $user1Id, "Email2 T1", '2024-01-02 10:00:00'); // Unread
+        $this->setEmailStatus($email1T1, $user1Id, 'read');
 
-        // Filter by group_id=1 AND status='read' for user_id=1
-        $output = $this->makeApiCall(['user_id' => 1, 'group_id' => 1, 'status' => 'read']);
-        $response = json_decode($output, true);
-        $this->assertArrayHasKey('data', $response);
+        // Thread 2 (not in group1)
+        $thread2Id = $this->createThread("Combo T2", $user1Id, null, '2024-01-02 11:00:00');
+        $email1T2 = $this->createEmail($thread2Id, $user1Id, "Email1 T2", '2024-01-02 11:00:00'); // Read
+        $this->setEmailStatus($email1T2, $user1Id, 'read');
 
-        $emailsInResponse = [];
-        $emailCount = 0;
-        if(isset($response['data']['threads'])) {
-            foreach ($response['data']['threads'] as $thread) {
-                foreach ($thread['emails'] as $email) {
-                    $emailsInResponse[$email['email_id']] = $email;
-                    $emailCount++;
-                }
-            }
-        }
+        // Thread 3 (in group1)
+        $thread3Id = $this->createThread("Combo T3", $user1Id, $groupId1, '2024-01-02 12:00:00');
+        $email1T3 = $this->createEmail($thread3Id, $user1Id, "Email1 T3", '2024-01-02 12:00:00'); // Read
+        $this->setEmailStatus($email1T3, $user1Id, 'read');
 
-        $this->assertArrayHasKey(1, $emailsInResponse, "Email 1 (group1, read) should be in response.");
-        $this->assertEquals('read', $emailsInResponse[1]['status']);
-        $this->assertArrayHasKey(5, $emailsInResponse, "Email 5 (group1, read) should be in response.");
-        $this->assertEquals('read', $emailsInResponse[5]['status']);
 
-        $this->assertArrayNotHasKey(3, $emailsInResponse, "Email 3 (no group, follow-up) should NOT be in response.");
-        $this->assertEquals(2, $emailCount, "Should only be 2 emails matching group1 and status read for user 1.");
+        // Filter by group_id=$groupId1 AND status='read' for user_id=$user1Id
+        $response = $this->executeApiScript('get_feed.php', 'GET', ['user_id' => $user1Id, 'group_id' => $groupId1, 'status' => 'read']);
+        $this->assertEquals(200, $response['code'], "API Call failed: {$response['raw_output']}");
+        $this->assertEquals('success', $response['body']['status']);
+
+        $threadsInResponse = $response['body']['data']['threads'];
+        $this->assertCount(2, $threadsInResponse, "Should be 2 threads matching group and having at least one 'read' email by user.");
+
+        // Check Thread 3 (latest activity in group, has a read email)
+        $this->assertEquals($thread3Id, $threadsInResponse[0]['thread_id']);
+        $this->assertCount(1, $threadsInResponse[0]['emails'], "Thread 3 should only contain its read email.");
+        $this->assertEquals($email1T3, $threadsInResponse[0]['emails'][0]['email_id']);
+        $this->assertEquals('read', $threadsInResponse[0]['emails'][0]['status']);
+
+        // Check Thread 1 (older activity in group, has a read email)
+        $this->assertEquals($thread1Id, $threadsInResponse[1]['thread_id']);
+        $this->assertCount(1, $threadsInResponse[1]['emails'], "Thread 1 should only contain its read email.");
+        $this->assertEquals($email1T1, $threadsInResponse[1]['emails'][0]['email_id']);
+        $this->assertEquals('read', $threadsInResponse[1]['emails'][0]['status']);
+
+        // Total items should be 2 (threads in group1 that have read emails by user1)
+        $this->assertEquals(2, $response['body']['data']['pagination']['total_items']);
     }
 }
 ?>
