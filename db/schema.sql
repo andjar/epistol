@@ -1,6 +1,6 @@
 -- Persons table (New - for sender/recipient details beyond users table)
 CREATE TABLE persons (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(255),
     avatar_url VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -8,7 +8,7 @@ CREATE TABLE persons (
 
 -- Email Addresses table (New - linked to persons)
 CREATE TABLE email_addresses (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     person_id INTEGER NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
     email_address VARCHAR(255) NOT NULL,
     is_primary BOOLEAN DEFAULT FALSE,
@@ -19,7 +19,7 @@ CREATE TABLE email_addresses (
 
 -- Users table (Now with person_id)
 CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     username VARCHAR(255) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE users (
 
 -- Groups table (Kept as is)
 CREATE TABLE groups (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     created_by_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -38,7 +38,7 @@ CREATE TABLE groups (
 
 -- Threads table (New)
 CREATE TABLE threads (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     subject VARCHAR(255) NOT NULL,
     created_by_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL, -- Optional: if a whole thread can belong to a group
@@ -48,7 +48,7 @@ CREATE TABLE threads (
 
 -- Emails table (Replaces Posts table)
 CREATE TABLE emails (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     thread_id INTEGER NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
     parent_email_id INTEGER REFERENCES emails(id) ON DELETE SET NULL, -- For nesting replies
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, -- Sender/author of the email
@@ -70,7 +70,7 @@ CREATE TABLE group_members (
 
 -- Email statuses table (Formerly post_statuses)
 CREATE TABLE email_statuses (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     email_id INTEGER NOT NULL REFERENCES emails(id) ON DELETE CASCADE, -- Renamed from post_id
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     status VARCHAR(255) NOT NULL, -- e.g., 'read', 'unread', 'archived', 'deleted'
@@ -79,7 +79,7 @@ CREATE TABLE email_statuses (
 
 -- Email Recipients table (New - links emails to their recipients)
 CREATE TABLE email_recipients (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     email_id INTEGER NOT NULL REFERENCES emails(id) ON DELETE CASCADE,
     person_id INTEGER REFERENCES persons(id) ON DELETE SET NULL, -- Who received it, if known person
     email_address_id INTEGER REFERENCES email_addresses(id) ON DELETE SET NULL, -- The specific email address it was sent to
@@ -90,7 +90,7 @@ CREATE TABLE email_recipients (
 
 -- Attachments table (New - for email attachments)
 CREATE TABLE attachments (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     email_id INTEGER NOT NULL REFERENCES emails(id) ON DELETE CASCADE,
     filename VARCHAR(255) NOT NULL,
     mimetype VARCHAR(255) NOT NULL,

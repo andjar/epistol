@@ -387,12 +387,14 @@ async function loadFeed(params = {}) {
     showGlobalLoader(); // Show global loader
     feedContainer.innerHTML = '<p>Loading feed...</p>'; // Specific loader for feed area
 
-    // Define a placeholder userId. In a real app, this would come from authentication.
-    const currentUserId = 1;
+    // Use alice_k's user ID (first user created in test data)
+    const currentUserId = 1; // This should be alice_k's ID since she's the first user created
+    console.log("Using user ID for feed:", currentUserId); // Debug log
 
     try {
         // Ensure params is an object.
         const effectiveParams = { ...params };
+        console.log("Loading feed with params:", effectiveParams); // Debug params
 
         // Get selected group and status for the API call
         const selectedGroupId = groupFeedFilterSelect ? groupFeedFilterSelect.value : null;
@@ -405,9 +407,14 @@ async function loadFeed(params = {}) {
             effectiveParams.status = selectedStatus;
         }
 
+        console.log("Effective params after adding filters:", effectiveParams); // Debug final params
+
         // getFeed now expects userId as the first argument.
         const response = await api.getFeed(currentUserId, effectiveParams); // Using api.getFeed
-        const threads = response.data ? response.data.threads : response.threads; // Adjust based on actual API response structure from get_feed.php
+        console.log("API getFeed response:", response); // Log the whole response
+
+        const threads = response.data ? response.data.threads : response.threads;
+        console.log("Extracted threads:", threads); // Log the extracted threads array
 
         if (!threads || threads.length === 0) {
             let filterMessage = '';
@@ -418,10 +425,12 @@ async function loadFeed(params = {}) {
             } else if (effectiveParams.status) {
                 filterMessage = ` for status '${effectiveParams.status}'`;
             }
+            console.log("No threads found with filters:", filterMessage); // Debug empty results
             feedContainer.innerHTML = `<p>No threads to display${filterMessage}.</p>`;
         } else {
             feedContainer.innerHTML = ''; // Clear "Loading feed..." message
             threads.forEach(thread => {
+                console.log("Processing thread for rendering:", thread); // Log each thread before rendering
                 // Pass currentUserId to renderThread
                 const threadElement = window.renderThread(thread, thread.subject, currentUserId);
                 feedContainer.appendChild(threadElement);

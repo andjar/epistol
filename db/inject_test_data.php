@@ -141,6 +141,8 @@ function inject_initial_data(PDO $pdo): void
 
     $thread_stmt = $pdo->prepare("INSERT INTO threads (subject, created_by_user_id, group_id) VALUES (:subject, :created_by_user_id, :group_id)");
     $email_stmt = $pdo->prepare("INSERT INTO emails (thread_id, user_id, group_id, subject, body_text, message_id_header) VALUES (:thread_id, :user_id, :group_id, :subject, :body_text, :message_id_header)");
+    $email_status_stmt = $pdo->prepare("INSERT INTO email_statuses (email_id, user_id, status) VALUES (:email_id, :user_id, :status)");
+    $update_thread_activity_stmt = $pdo->prepare("UPDATE threads SET last_activity_at = :timestamp WHERE id = :thread_id");
 
     foreach ($posts_as_emails as $email_data) {
         $user_id = $user_ids[$email_data['username']];
@@ -165,6 +167,25 @@ function inject_initial_data(PDO $pdo): void
                 'subject' => $email_data['subject'],
                 'body_text' => $email_data['body'],
                 'message_id_header' => $message_id
+            ]);
+            $email_id = $pdo->lastInsertId();
+
+            // Create email statuses for all users except the sender
+            foreach ($user_ids as $other_username => $other_user_id) {
+                if ($other_user_id !== $user_id) {
+                    $email_status_stmt->execute([
+                        'email_id' => $email_id,
+                        'user_id' => $other_user_id,
+                        'status' => 'unread'
+                    ]);
+                }
+            }
+
+            // Update thread's last_activity_at
+            $current_timestamp = date('Y-m-d H:i:s');
+            $update_thread_activity_stmt->execute([
+                'timestamp' => $current_timestamp,
+                'thread_id' => $thread_id
             ]);
 
             $pdo->commit();
