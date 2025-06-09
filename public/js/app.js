@@ -388,40 +388,6 @@ function hideComposeModal() {
     }
 }
 
-// Global Loader Functions
-function showGlobalLoader() {
-    if (globalLoader) globalLoader.style.display = 'block';
-}
-
-function hideGlobalLoader() {
-    if (globalLoader) globalLoader.style.display = 'none';
-}
-
-/**
- * Shows the compose email modal.
- */
-function showComposeModal() {
-    if (composeModal) {
-        composeModal.style.display = 'block';
-    }
-}
-
-/**
- * Hides the compose email modal and resets the form.
- */
-function hideComposeModal() {
-    if (composeModal) {
-        composeModal.style.display = 'none';
-        composeForm.reset(); // Reset form fields, including file inputs
-        composeInReplyTo.value = ''; // Ensure hidden field is also cleared
-        // Explicitly clear file input for good measure, though reset() should handle it.
-        const attachmentsInput = document.getElementById('compose-attachments');
-        if (attachmentsInput) {
-            attachmentsInput.value = null;
-        }
-    }
-}
-
 // Removed showProfileModal and hideProfileModal functions
 
 /**
