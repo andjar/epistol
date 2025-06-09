@@ -1,5 +1,5 @@
 config/credentials.php
-db/database.sqlite
+storage/database.sqlite
 vendor/
 storage/attachments/
 

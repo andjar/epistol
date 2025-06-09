@@ -453,7 +453,8 @@ async function loadGroups() {
     groupFeedFilterSelect.appendChild(filterFirstOption); // Add "All Groups" back
 
     try {
-        const groups = await api.getGroups();
+        const response = await api.getGroups();
+        const groups = response.data ? response.data.groups : response.groups;
 
         groupsListContainer.innerHTML = '';
         if (!groups || groups.length === 0) {

@@ -79,8 +79,8 @@ try {
 
     // Base query to fetch groups and their member counts
     // Using a subquery for member_count
-    $sql = "SELECT g.group_id, g.name AS group_name, g.created_at,
-                   (SELECT COUNT(gm.person_id) FROM group_members gm WHERE gm.group_id = g.group_id) as member_count
+    $sql = "SELECT g.id as group_id, g.name AS group_name, g.created_at,
+                   (SELECT COUNT(gm.user_id) FROM group_members gm WHERE gm.group_id = g.id) as member_count
             FROM groups g
             ORDER BY g.created_at DESC
             LIMIT :limit OFFSET :offset";

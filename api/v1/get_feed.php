@@ -15,20 +15,23 @@ try {
     $page = isset($_GET['page']) ? filter_var($_GET['page'], FILTER_VALIDATE_INT, ['options' => ['default' => 1, 'min_range' => 1]]) : 1;
     $user_id = isset($_GET['user_id']) ? filter_var($_GET['user_id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) : null;
     $status_filter = isset($_GET['status']) && !empty($_GET['status']) ? trim($_GET['status']) : null;
-    $group_id_filter = isset($_GET['group_id']) && !empty($_GET['group_id']) ? trim($_GET['group_id']) : null; // For pagination total count
+    $group_id_filter = isset($_GET['group_id']) && !empty($_GET['group_id']) ? filter_var($_GET['group_id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) : null;
 
     // Use ITEMS_PER_PAGE from config.php if defined, otherwise fallback to 20.
     $default_limit = defined('ITEMS_PER_PAGE') ? ITEMS_PER_PAGE : 20;
     $limit = isset($_GET['limit']) ? filter_var($_GET['limit'], FILTER_VALIDATE_INT, ['options' => ['default' => $default_limit, 'min_range' => 1]]) : $default_limit;
 
-    if ($page === false || $page <= 0) { // filter_var returns false on failure
+    if ($page === false || $page <= 0) {
         send_json_error('Invalid page number. Page must be a positive integer.', 400);
     }
-    if ($limit === false || $limit <= 0) { // filter_var returns false on failure
+    if ($limit === false || $limit <= 0) {
         send_json_error('Invalid limit value. Limit must be a positive integer.', 400);
     }
-    if ($user_id === false || $user_id === null || $user_id <= 0) { // filter_var returns false on failure or if not provided
+    if ($user_id === false || $user_id === null || $user_id <= 0) {
         send_json_error('Invalid or missing user_id. User ID must be a positive integer.', 400);
+    }
+    if (isset($_GET['group_id']) && !empty($_GET['group_id']) && ($group_id_filter === false || $group_id_filter <=0)) {
+         send_json_error('Invalid group_id. Group ID must be a positive integer.', 400);
     }
 
     // 3. Database Interaction
@@ -46,79 +49,119 @@ try {
     // Calculate offset for pagination
     $offset = ($page - 1) * $limit;
 
-    // Base SQL parts
-    $select_sql = "SELECT
+    // Main SQL Query using CTEs
+    $sql = "
+        WITH LatestEmailInThread AS (
+            SELECT
+                e.thread_id,
+                e.id AS email_id,
+                e.subject AS email_subject,
+                SUBSTRING(e.body_text, 1, 100) AS body_preview,
+                e.created_at AS email_timestamp,
+                u.id AS sender_user_id,
+                p.id AS sender_person_id,
+                COALESCE(p.name, u.username) AS sender_name,
+                p.avatar_url AS sender_avatar_url,
+                COALESCE(es.status, 'unread') AS email_status,
+                ROW_NUMBER() OVER(PARTITION BY e.thread_id ORDER BY e.created_at DESC) as rn
+            FROM emails e
+            JOIN users u ON e.user_id = u.id
+            LEFT JOIN persons p ON u.person_id = p.id
+            LEFT JOIN email_statuses es ON e.id = es.email_id AND es.user_id = :current_user_id
+        ),
+        ThreadParticipantsAgg AS (
+            SELECT
+                e.thread_id,
+                GROUP_CONCAT(DISTINCT COALESCE(p.name, u.username)) as participant_names_str
+            FROM emails e
+            JOIN users u ON e.user_id = u.id
+            LEFT JOIN persons p ON u.person_id = p.id
+            GROUP BY e.thread_id
+        )
+        SELECT
             t.id AS thread_id,
-            t.subject AS subject,
-            e.id AS email_id,
-            p.name AS sender_name,
-            COALESCE(e.snippet, SUBSTR(e.body_text, 1, 100)) AS body_preview,
-            e.timestamp AS email_timestamp,
-            thread_max_timestamps.max_ts AS last_reply_time,
-            COALESCE(ps.status, 'unread') AS post_status";
+            t.subject AS thread_subject,
+            COALESCE(le.email_timestamp, t.last_activity_at) AS last_activity_at, -- Use email timestamp if available
+            le.email_id, 
+            le.email_subject, 
+            le.body_preview, 
+            le.email_timestamp,
+            le.sender_user_id, 
+            le.sender_person_id, 
+            le.sender_name, 
+            le.sender_avatar_url,
+            le.email_status,
+            tp.participant_names_str
+        FROM threads t
+        JOIN LatestEmailInThread le ON t.id = le.thread_id AND le.rn = 1
+        LEFT JOIN ThreadParticipantsAgg tp ON t.id = tp.thread_id
+        WHERE 1=1";
 
-    $from_sql = "FROM threads t
-        JOIN emails e ON t.id = e.thread_id
-        JOIN persons p ON e.from_person_id = p.id
-        LEFT JOIN post_statuses ps ON e.id = ps.post_id AND ps.user_id = :current_user_id
-        JOIN (SELECT thread_id, MAX(timestamp) AS max_ts FROM emails GROUP BY thread_id) AS thread_max_timestamps
-             ON t.id = thread_max_timestamps.thread_id";
+    $bindings = [':current_user_id' => $user_id];
 
-    // WHERE clause construction for the main query
-    // The subquery for paginated_thread_ids determines *which threads* appear on the page.
-    // The outer WHERE clause then filters *emails within those threads*.
-    // This could lead to threads appearing with zero emails if all are filtered out by status.
-
-    $where_conditions = [];
-    $bindings = [
-        ':limit' => $limit,
-        ':offset' => $offset,
-        ':current_user_id' => $user_id
-    ];
-
-    // Subquery for paginated thread IDs (this part might need adjustment if group_id or status should affect which threads are paginated)
-    // For now, group_id_filter is NOT applied to the thread pagination subquery, but it SHOULD if we want to paginate correctly within a group.
-    // Let's assume for now pagination is global and group/status filters apply to the emails within those globally paginated threads.
-    // A more accurate pagination would incorporate filters into the thread selection subquery.
-    $paginated_threads_subquery = "
-        SELECT thr.id
-        FROM threads thr
-        JOIN emails em_inner ON thr.id = em_inner.thread_id ";
-
-    // If group_id_filter is present, it should ideally filter the threads for pagination.
-    // This is a simplification: if group_id is applied, it should be in the subquery.
-    // For now, let's keep the subquery as is and filter emails by group in the outer query if group_id is provided.
-    // This is not ideal for pagination accuracy if group filter is very restrictive.
-    // However, the original query had group_id filtering outside this subquery too.
-
-    $paginated_threads_subquery .= " GROUP BY thr.id ORDER BY MAX(em_inner.timestamp) DESC LIMIT :limit OFFSET :offset";
-
-    $where_conditions[] = "t.id IN ({$paginated_threads_subquery})";
-
-    if ($group_id_filter) {
-        // This filters emails within the paginated threads by group_id.
-        // If a thread has no emails belonging to this group, it might appear empty or be omitted later in processing.
-        $where_conditions[] = "e.group_id = :group_id_filter"; // Assuming 'emails' table has 'group_id'
+    if ($group_id_filter !== null) {
+        $sql .= " AND t.group_id = :group_id_filter";
         $bindings[':group_id_filter'] = $group_id_filter;
     }
 
-    if ($status_filter) {
+    if ($status_filter !== null) {
         if ($status_filter === 'unread') {
-            // Correctly checks for emails belonging to the current_user_id that are either not in post_statuses or explicitly 'unread'.
-            // The join condition `ps.user_id = :current_user_id` is crucial.
-            // If an email has no entry in post_statuses for this user, ps.id will be NULL.
-            $where_conditions[] = "(ps.id IS NULL OR ps.status = 'unread')";
+            $sql .= " AND (le.email_status = 'unread' OR le.email_status IS NULL)";
         } else {
-            $where_conditions[] = "ps.status = :status_filter";
+            $sql .= " AND le.email_status = :status_filter";
             $bindings[':status_filter'] = $status_filter;
         }
     }
+    
+    // Ensure thread has at least one email (implicitly handled by JOIN with LatestEmailInThread)
+    // but explicitly checking can be clearer or useful if JOIN type changes.
+    // $sql .= " AND EXISTS (SELECT 1 FROM emails e_check WHERE e_check.thread_id = t.id)";
 
-    $sql = $select_sql . " " . $from_sql;
-    if (!empty($where_conditions)) {
-        $sql .= " WHERE " . implode(" AND ", $where_conditions);
+
+    // Count Query (must reflect the same filtering logic)
+    $count_sql_outer = "SELECT COUNT(DISTINCT ft.id) FROM (
+        SELECT t_outer.id
+        FROM threads t_outer
+        JOIN (
+            SELECT e_inner.thread_id, e_inner.id AS latest_email_id,
+                   COALESCE(es_inner.status, 'unread') AS latest_email_status,
+                   ROW_NUMBER() OVER(PARTITION BY e_inner.thread_id ORDER BY e_inner.created_at DESC) as rn
+            FROM emails e_inner
+            LEFT JOIN email_statuses es_inner ON e_inner.id = es_inner.email_id AND es_inner.user_id = :current_user_id_count_outer
+        ) le_check ON t_outer.id = le_check.thread_id AND le_check.rn = 1
+        WHERE 1=1";
+
+    $count_bindings_outer = [':current_user_id_count_outer' => $user_id];
+
+    if ($group_id_filter !== null) {
+        $count_sql_outer .= " AND t_outer.group_id = :group_id_filter_count_outer";
+        $count_bindings_outer[':group_id_filter_count_outer'] = $group_id_filter;
     }
-    $sql .= " ORDER BY last_reply_time DESC, e.timestamp ASC;";
+
+    if ($status_filter !== null) {
+        if ($status_filter === 'unread') {
+            $count_sql_outer .= " AND (le_check.latest_email_status = 'unread' OR le_check.latest_email_status IS NULL)";
+        } else {
+            $count_sql_outer .= " AND le_check.latest_email_status = :status_filter_count_outer";
+            $count_bindings_outer[':status_filter_count_outer'] = $status_filter;
+        }
+    }
+    $count_sql_outer .= " ) ft";
+
+
+    $count_stmt = $pdo->prepare($count_sql_outer);
+    foreach ($count_bindings_outer as $key => $value) {
+        $count_stmt->bindValue($key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+    }
+    $count_stmt->execute();
+    $total_items = (int)$count_stmt->fetchColumn();
+    $total_pages = ($limit > 0 && $total_items > 0) ? ceil($total_items / $limit) : 0;
+
+
+    // Add ordering and pagination to the main query
+    $sql .= " ORDER BY last_activity_at DESC LIMIT :limit OFFSET :offset";
+    $bindings[':limit'] = $limit;
+    $bindings[':offset'] = $offset;
 
     $stmt = $pdo->prepare($sql);
     foreach ($bindings as $key => $value) {
@@ -127,88 +170,61 @@ try {
     $stmt->execute();
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Adjust total items count for pagination if filters are active
-    // This is a simplified count and might not be perfectly accurate with the email-level filtering.
-    // A truly accurate count would need to reflect the same filtering logic as the main query.
-    $count_sql = "SELECT COUNT(DISTINCT t.id) FROM threads t";
-    $count_bindings = [];
-
-    if ($group_id_filter) {
-        // To count threads that *have* emails in that group.
-        $count_sql .= " JOIN emails e_count ON t.id = e_count.thread_id WHERE e_count.group_id = :group_id_filter";
-        $count_bindings[':group_id_filter'] = $group_id_filter;
-    }
-    // Status filter for total count is more complex as it depends on post_statuses per user.
-    // For simplicity, not adding status filter to total count for now. This means pagination total_pages might be an overestimate when status filter is active.
-
-    $count_stmt = $pdo->prepare($count_sql);
-    foreach ($count_bindings as $key => $value) {
-        $count_stmt->bindValue($key, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
-    }
-    $count_stmt->execute();
-    $total_items = (int)$count_stmt->fetchColumn();
-
-    // 5. Data Processing
+    // 4. Data Processing
     $processed_threads = [];
-    $threads_map = []; // Helper map to group emails by thread_id
-
     foreach ($results as $row) {
-        $thread_id = $row['thread_id'];
-
-        if (!isset($threads_map[$thread_id])) {
-            $threads_map[$thread_id] = [
-                'thread_id' => $thread_id,
-                'subject' => $row['subject'],
-                'participants' => [], // Will be populated from emails
-                'last_reply_time' => $row['last_reply_time'],
-                'emails' => []
-            ];
+        $participants = [];
+        if (!empty($row['participant_names_str'])) {
+            $participants = array_unique(explode(',', $row['participant_names_str']));
         }
 
-        $threads_map[$thread_id]['emails'][] = [
-            'email_id' => $row['email_id'],
-            'sender_name' => $row['sender_name'],
-            'body_preview' => $row['body_preview'],
-            'timestamp' => $row['email_timestamp'],
-            'status' => $row['post_status'] // Added post status
+        $processed_threads[] = [
+            'thread_id' => (int)$row['thread_id'],
+            'subject' => $row['thread_subject'],
+            'participants' => $participants, // Array of names
+            'last_reply_time' => $row['last_activity_at'], // This is now correctly the latest email's timestamp or thread's last activity
+            'emails' => [ // Emails array will contain only the latest email
+                [
+                    'email_id' => (int)$row['email_id'],
+                    'parent_email_id' => null, // The CTE doesn't fetch parent_email_id for the latest email, adjust if needed
+                    'subject' => $row['email_subject'],
+                    'sender_user_id' => (int)$row['sender_user_id'],
+                    'sender_person_id' => $row['sender_person_id'] ? (int)$row['sender_person_id'] : null,
+                    'sender_name' => $row['sender_name'],
+                    'sender_avatar_url' => $row['sender_avatar_url'] ?: '/avatars/default.png',
+                    'body_preview' => $row['body_preview'],
+                    'timestamp' => $row['email_timestamp'],
+                    'status' => $row['email_status']
+                ]
+            ]
         ];
     }
 
-    // Populate participants and structure the final array
-    foreach ($threads_map as $thread_id => $thread_data) {
-        $participant_names = [];
-        foreach ($thread_data['emails'] as $email) {
-            if (!in_array($email['sender_name'], $participant_names)) {
-                $participant_names[] = $email['sender_name'];
-            }
-        }
-        $thread_data['participants'] = $participant_names;
-        // Ensure emails are ordered by timestamp as per original query's secondary sort
-        // The SQL query already sorts emails by timestamp ASC, so they should be in order.
-        $processed_threads[] = $thread_data;
-    }
+    // 5. Success Response
+    $response_data = [
+        'threads' => $processed_threads,
+        'pagination' => [
+            'current_page' => $page,
+            'per_page' => $limit,
+            'total_items' => $total_items,
+            'total_pages' => $total_pages
+        ]
+    ];
 
-    // Sort threads by last_reply_time DESC (already done by SQL, but good for explicit control if needed)
-    // usort($processed_threads, function ($a, $b) {
-    //    return strcmp($b['last_reply_time'], $a['last_reply_time']);
-    // });
+    send_json_success($response_data);
 
+} catch (PDOException $e) {
+    error_log("PDOException in get_feed.php: " . $e->getMessage() . "\nTrace: " . $e->getTraceAsString());
+    send_json_error('A database error occurred while fetching the feed. Please try again.', 500);
+} catch (Exception $e) {
+    error_log("General Exception in get_feed.php: " . $e->getMessage() . "\nTrace: " . $e->getTraceAsString());
+    // Avoid exposing too much detail in generic errors for security.
+    send_json_error('An unexpected error occurred. Please try again.', 500);
+}
 
-    // Fetch total number of threads for pagination
-    $count_stmt = $pdo->query("SELECT COUNT(*) FROM threads");
-    $total_items = (int)$count_stmt->fetchColumn();
-    $total_pages = ($limit > 0 && $total_items > 0) ? ceil($total_items / $limit) : 1;
-     if ($total_items == 0) {
-        $total_pages = 0;
-        // If there are no items, current page should ideally be 0 or 1.
-        // Let's ensure current_page doesn't exceed total_pages if total_items is 0.
-        // However, the input validation already ensures $page >= 1.
-        // If $total_items is 0, $total_pages will be 0.
-        // $page could still be 1. This seems acceptable.
-    }
+/*
+// 7. Example of expected JSON output structure
 
-
-    // 6. Success Response
     $response_data = [
         'threads' => $processed_threads,
         'pagination' => [
@@ -225,7 +241,7 @@ try {
     error_log("PDOException in get_feed.php: " . $e->getMessage());
     send_json_error('A database error occurred while fetching the feed. Please try again.', 500);
 } catch (Exception $e) {
-    error_log("General Exception in get_feed.php: " . $e->getMessage());
+    error_log("General Exception in get_feed.php: " . $e->getMessage() . "\nTrace: " . $e->getTraceAsString());
     // Avoid exposing too much detail in generic errors for security.
     send_json_error('An unexpected error occurred. Please try again.', 500);
 }

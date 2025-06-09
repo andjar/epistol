@@ -1,145 +1,209 @@
 <?php
 
-use PHPUnit\Framework\TestCase;
+require_once __DIR__ . '/BaseApiTest.php';
 
-class GetThreadApiTest extends TestCase
+class GetThreadApiTest extends BaseApiTest
 {
-    private static $pdo;
-
-    public static function setUpBeforeClass(): void
-    {
-        require_once __DIR__ . '/../config/config.php';
-        require_once __DIR__ . '/../src/db.php';
-        require_once __DIR__ . '/../db/inject_test_data.php';
-
-        if (defined('DB_PATH')) {
-            if (file_exists(DB_PATH)) {
-                unlink(DB_PATH);
-            }
-            self::$pdo = get_db_connection(); // Creates schema & injects initial data
-        } else {
-            throw new \Exception("DB_PATH is not defined.");
-        }
-    }
+    private $testUserIds = [];
+    private $testPersonIds = [];
+    private $testThreadIds = [];
+    private $testEmailIds = [];
+    private $testAttachmentIds = [];
+    private $testGroupIds = []; // Though not directly used in get_thread, good for consistency
 
     protected function setUp(): void
     {
-        self::$pdo->exec("DELETE FROM post_statuses;");
-        // Assumed data from inject_test_data.php:
-        // User 1 (id=1, person_id='person_user1_id'), User 2 (id=2, person_id='person_user2_id')
-        // Thread 1 (id=1) contains Email 1 (id=1, from person_user1_id) and Email 2 (id=2, from person_user2_id)
-        // Thread 2 (id=2) contains Email 3 (id=3, from person_user1_id)
+        parent::setUp(); // Important to call parent setUp
+        // Clean up specific tables before each test, if needed, or rely on tearDown
+        // $this->executeSql("DELETE FROM attachments");
+        // $this->executeSql("DELETE FROM email_statuses");
+        // $this->executeSql("DELETE FROM emails");
+        // $this->executeSql("DELETE FROM threads");
+        // $this->executeSql("DELETE FROM persons");
+        // $this->executeSql("DELETE FROM users WHERE id > 2"); // Keep initial users if any
     }
 
-    private function makeApiCall(array $params)
+    protected function tearDown(): void
     {
-        $_GET = $params;
-        $_SERVER['REQUEST_METHOD'] = 'GET';
+        // Order of deletion matters due to foreign key constraints.
+        // Use prepared statements to prevent SQL injection and handle empty arrays gracefully.
 
-        ob_start();
-        require __DIR__ . '/../api/get_thread.php';
-        return ob_get_clean();
-    }
-
-    public function testMissingThreadIdParameter()
-    {
-        $output = $this->makeApiCall(['user_id' => 1]);
-        $response = json_decode($output, true);
-        $this->assertArrayHasKey('error', $response);
-        $this->assertEquals('Valid thread_id is required.', $response['error']);
-    }
-
-    public function testMissingUserIdParameter()
-    {
-        $output = $this->makeApiCall(['thread_id' => 'thread_1']); // Assuming thread_1 is a valid ID from test data
-        $response = json_decode($output, true);
-        $this->assertArrayHasKey('error', $response);
-        $this->assertEquals('Invalid or missing user_id. User ID must be a positive integer.', $response['error']);
-    }
-
-    public function testThreadNotFound()
-    {
-        $output = $this->makeApiCall(['thread_id' => 'non_existent_thread_id_12345', 'user_id' => 1]);
-        $response = json_decode($output, true);
-        $this->assertArrayHasKey('error', $response);
-        $this->assertEquals('Thread not found.', $response['error']);
-    }
-
-    public function testPostStatusPresenceAndDefaultInThread()
-    {
-        // Fetch Thread 1 for User 1. Email 1 and Email 2 are in this thread.
-        // Email 1 is by user 1 (person_user1_id), Email 2 by user 2 (person_user2_id)
-        // User 1 is viewing.
-        $output = $this->makeApiCall(['thread_id' => 'thread1_id', 'user_id' => 1]); // Assuming thread1_id exists
-        $response = json_decode($output, true);
-
-        $this->assertArrayHasKey('data', $response, "Response data missing: $output");
-        $this->assertEquals('thread1_id', $response['data']['id']);
-        $this->assertNotEmpty($response['data']['emails']);
-
-        foreach ($response['data']['emails'] as $email) {
-            $this->assertArrayHasKey('status', $email, "Email ID {$email['id']} missing status field.");
-            // All emails in the thread should show a status relevant to user_id 1.
-            // If no status is set for email_id X for user_id 1, it defaults to 'unread'.
-            $this->assertEquals('unread', $email['status'], "Email ID {$email['id']} should default to unread for user 1.");
-        }
-    }
-
-    public function testSpecificPostStatusInThreadForViewingUser()
-    {
-        // Set status for Email 1 (id=1) to 'read' for User 1 (id=1)
-        self::$pdo->exec("INSERT INTO post_statuses (post_id, user_id, status) VALUES (1, 1, 'read')");
-        // Set status for Email 2 (id=2) to 'follow-up' for User 1 (id=1)
-        self::$pdo->exec("INSERT INTO post_statuses (post_id, user_id, status) VALUES (2, 1, 'follow-up')");
-
-        // User 1 views Thread 1 (which contains Email 1 and Email 2)
-        $output = $this->makeApiCall(['thread_id' => 'thread1_id', 'user_id' => 1]);
-        $response = json_decode($output, true);
-
-        $this->assertArrayHasKey('data', $response);
-        $this->assertNotEmpty($response['data']['emails']);
-
-        $statusesFound = [];
-        foreach ($response['data']['emails'] as $email) {
-            $statusesFound[$email['id']] = $email['status'];
+        if (!empty($this->testAttachmentIds)) {
+            $placeholders = implode(',', array_fill(0, count($this->testAttachmentIds), '?'));
+            $this->executeSql("DELETE FROM attachments WHERE id IN ($placeholders)", $this->testAttachmentIds);
         }
 
-        $this->assertEquals('read', $statusesFound[1], "Email 1 should be 'read' for user 1.");
-        $this->assertEquals('follow-up', $statusesFound[2], "Email 2 should be 'follow-up' for user 1.");
+        if (!empty($this->testEmailIds)) {
+            $placeholders = implode(',', array_fill(0, count($this->testEmailIds), '?'));
+            $this->executeSql("DELETE FROM email_statuses WHERE email_id IN ($placeholders)", $this->testEmailIds);
+            $this->executeSql("DELETE FROM emails WHERE id IN ($placeholders)", $this->testEmailIds);
+        }
+
+        if (!empty($this->testThreadIds)) {
+            $placeholders = implode(',', array_fill(0, count($this->testThreadIds), '?'));
+            $this->executeSql("DELETE FROM threads WHERE id IN ($placeholders)", $this->testThreadIds);
+        }
+
+        // Clean up persons and users created by tests, be careful with shared users.
+        if (!empty($this->testUserIds)) {
+            $placeholders = implode(',', array_fill(0, count($this->testUserIds), '?'));
+            $this->executeSql("UPDATE users SET person_id = NULL WHERE id IN ($placeholders)", $this->testUserIds);
+        }
+
+        if (!empty($this->testPersonIds)) {
+            $placeholders = implode(',', array_fill(0, count($this->testPersonIds), '?'));
+            $this->executeSql("DELETE FROM persons WHERE id IN ($placeholders)", $this->testPersonIds);
+        }
+
+        $deletableUserIds = array_filter($this->testUserIds, fn ($id) => $id > 0);
+        if (!empty($deletableUserIds)) {
+            $params = array_values($deletableUserIds); // Re-index for PDO
+            $placeholders = implode(',', array_fill(0, count($params), '?'));
+            $this->executeSql("DELETE FROM users WHERE id IN ($placeholders)", $params);
+        }
+
+        $this->testUserIds = [];
+        $this->testPersonIds = [];
+        $this->testThreadIds = [];
+        $this->testEmailIds = [];
+        $this->testAttachmentIds = [];
+        parent::tearDown();
     }
 
-    public function testStatusInThreadForDifferentUser()
+    private function createTestUserWithPerson(string $usernameSuffix, &$userId, &$personId)
     {
-        // User 1 marks Email 1 (id=1) as 'important-info'
-        self::$pdo->exec("INSERT INTO post_statuses (post_id, user_id, status) VALUES (1, 1, 'important-info')");
-        // User 2 marks Email 1 (id=1) as 'read'
-        self::$pdo->exec("INSERT INTO post_statuses (post_id, user_id, status) VALUES (1, 2, 'read')");
+        // Create Person
+        $personName = "Test Person " . $usernameSuffix;
+        $this->executeSql("INSERT INTO persons (name, avatar_url) VALUES (?, ?)", [$personName, "/avatars/test{$usernameSuffix}.png"]);
+        $personId = $this->getLastInsertId();
+        $this->testPersonIds[] = $personId;
 
-        // User 2 views Thread 1 (which contains Email 1)
-        $output = $this->makeApiCall(['thread_id' => 'thread1_id', 'user_id' => 2]);
-        $response = json_decode($output, true);
-        $this->assertArrayHasKey('data', $response);
-        $email1StatusForUser2 = null;
-        foreach ($response['data']['emails'] as $email) {
-            if ($email['id'] == 1) {
-                $email1StatusForUser2 = $email['status'];
-                break;
-            }
-        }
-        $this->assertEquals('read', $email1StatusForUser2, "Email 1 should be 'read' for user 2.");
+        // Create User linked to Person
+        $email = "user{$usernameSuffix}@example.com";
+        $this->executeSql(
+            "INSERT INTO users (username, email, password_hash, person_id, created_at) VALUES (?, ?, ?, ?, datetime('now'))",
+            ["user{$usernameSuffix}", $email, password_hash("password", PASSWORD_DEFAULT), $personId]
+        );
+        $userId = $this->getLastInsertId();
+        $this->testUserIds[] = $userId;
+    }
 
-        // User 1 views Thread 1
-        $outputUser1 = $this->makeApiCall(['thread_id' => 'thread1_id', 'user_id' => 1]);
-        $responseUser1 = json_decode($outputUser1, true);
-        $this->assertArrayHasKey('data', $responseUser1);
-        $email1StatusForUser1 = null;
-        foreach ($responseUser1['data']['emails'] as $email) {
-            if ($email['id'] == 1) {
-                $email1StatusForUser1 = $email['status'];
-                break;
-            }
+    public function testGetThreadWithRepliesAndAttachments()
+    {
+        // 1. Setup
+        $this->createTestUserWithPerson("ThreadSender", $user1Id, $person1Id);
+        $this->createTestUserWithPerson("ThreadReplier", $user2Id, $person2Id);
+        $viewingUserId = $user1Id; // User1 is viewing the thread
+
+        // Create Thread
+        $threadSubject = "Thread for API Test";
+        $this->executeSql("INSERT INTO threads (subject, created_by_user_id, created_at, last_activity_at) VALUES (?, ?, datetime('now'), datetime('now'))",
+            [$threadSubject, $user1Id]
+        );
+        $threadId = $this->getLastInsertId();
+        $this->testThreadIds[] = $threadId;
+
+        // Create Root Email (email1)
+        $email1Subject = "Root Email Subject";
+        $email1Body = "Body of root email.";
+        $this->executeSql(
+            "INSERT INTO emails (thread_id, user_id, subject, body_text, body_html, created_at, message_id_header) VALUES (?, ?, ?, ?, ?, datetime('now'), ?)",
+            [$threadId, $user1Id, $email1Subject, $email1Body, "<p>{$email1Body}</p>", "<msg1@test.com>"]
+        );
+        $email1Id = $this->getLastInsertId();
+        $this->testEmailIds[] = $email1Id;
+
+        // Create Attachment for email1
+        $this->executeSql(
+            "INSERT INTO attachments (email_id, filename, mimetype, filesize_bytes, filepath_on_disk, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))",
+            [$email1Id, "test_attachment.txt", "text/plain", 123, "unique_path_to_test_attachment.txt"]
+        );
+        $attachment1Id = $this->getLastInsertId();
+        $this->testAttachmentIds[] = $attachment1Id;
+
+        // Update thread last_activity_at based on email1 (send_email.php would do this)
+        $this->executeSql("UPDATE threads SET last_activity_at = (SELECT created_at FROM emails WHERE id = ?) WHERE id = ?", [$email1Id, $threadId]);
+
+
+        // Create Reply Email (email2)
+        $email2Subject = "Reply Email Subject";
+        $email2Body = "Body of reply email.";
+        // Simulate a slight delay for created_at
+        sleep(1); // To ensure created_at times are distinct for ordering if necessary
+        $this->executeSql(
+            "INSERT INTO emails (thread_id, parent_email_id, user_id, subject, body_text, body_html, created_at, message_id_header) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?)",
+            [$threadId, $email1Id, $user2Id, $email2Subject, $email2Body, "<p>{$email2Body}</p>", "<msg2@test.com>"]
+        );
+        $email2Id = $this->getLastInsertId();
+        $this->testEmailIds[] = $email2Id;
+
+        // Update thread last_activity_at based on email2
+        $this->executeSql("UPDATE threads SET last_activity_at = (SELECT created_at FROM emails WHERE id = ?) WHERE id = ?", [$email2Id, $threadId]);
+
+
+        // Set status for email2 for viewingUser (user1Id)
+        $this->executeSql("INSERT INTO email_statuses (email_id, user_id, status, created_at) VALUES (?, ?, 'read', datetime('now'))",
+            [$email2Id, $viewingUserId]
+        );
+
+        // 2. Execution
+        $response = $this->executeApiScript('get_thread.php', 'GET', ['thread_id' => $threadId, 'user_id' => $viewingUserId]);
+
+        // 3. Assertions
+        $this->assertEquals(200, $response['code'], "API call failed: {$response['raw_output']}");
+        $this->assertEquals('success', $response['body']['status']);
+        $data = $response['body']['data'];
+
+        $this->assertEquals($threadId, $data['id']);
+        $this->assertEquals($threadSubject, $data['subject']);
+        $this->assertCount(2, $data['emails'], "Should be 2 emails in the thread.");
+        $this->assertCount(2, $data['participants'], "Should be 2 participants."); // user1 and user2
+
+        // Check participants (order might vary, so check presence)
+        $participantUserIds = array_map(fn($p) => $p['user_id'], $data['participants']);
+        $this->assertContains($user1Id, $participantUserIds);
+        $this->assertContains($user2Id, $participantUserIds);
+
+
+        $responseEmail1 = null;
+        $responseEmail2 = null;
+        foreach($data['emails'] as $emailInResponse) {
+            if ($emailInResponse['id'] === $email1Id) $responseEmail1 = $emailInResponse;
+            if ($emailInResponse['id'] === $email2Id) $responseEmail2 = $emailInResponse;
         }
-        $this->assertEquals('important-info', $email1StatusForUser1, "Email 1 should be 'important-info' for user 1.");
+        $this->assertNotNull($responseEmail1, "Email 1 not found in response.");
+        $this->assertNotNull($responseEmail2, "Email 2 not found in response.");
+
+        // Assertions for Email 1 (root email)
+        $this->assertEquals($email1Id, $responseEmail1['id']);
+        $this->assertNull($responseEmail1['parent_email_id']);
+        $this->assertEquals($email1Subject, $responseEmail1['subject']);
+        $this->assertEquals($user1Id, $responseEmail1['sender']['user_id']);
+        $this->assertEquals($person1Id, $responseEmail1['sender']['id']); // person_id
+        $this->assertEquals("Test Person ThreadSender", $responseEmail1['sender']['name']);
+        $this->assertCount(1, $responseEmail1['attachments']);
+        $this->assertEquals($attachment1Id, $responseEmail1['attachments'][0]['id']);
+        $this->assertEquals("test_attachment.txt", $responseEmail1['attachments'][0]['filename']);
+        $this->assertEquals('unread', $responseEmail1['status'], "Email 1 status for user $viewingUserId should default to unread.");
+
+
+        // Assertions for Email 2 (reply email)
+        $this->assertEquals($email2Id, $responseEmail2['id']);
+        $this->assertEquals($email1Id, $responseEmail2['parent_email_id']);
+        $this->assertEquals($email2Subject, $responseEmail2['subject']);
+        $this->assertEquals($user2Id, $responseEmail2['sender']['user_id']);
+        $this->assertEquals($person2Id, $responseEmail2['sender']['id']); // person_id
+        $this->assertEquals("Test Person ThreadReplier", $responseEmail2['sender']['name']);
+        $this->assertCount(0, $responseEmail2['attachments']);
+        $this->assertEquals('read', $responseEmail2['status'], "Email 2 status for user $viewingUserId should be 'read'.");
+    }
+
+    public function testGetThreadNotFound()
+    {
+        $response = $this->executeApiScript('get_thread.php', 'GET', ['thread_id' => 99999, 'user_id' => 1]);
+        $this->assertEquals(404, $response['code'], "API should return 404 for non-existent thread: {$response['raw_output']}");
+        $this->assertEquals('error', $response['body']['status']);
+        $this->assertEquals('Thread not found.', $response['body']['message']);
     }
 }
 ?>
