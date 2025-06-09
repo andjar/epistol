@@ -1,11 +1,11 @@
 <?php
 
 // 1. Include necessary files
-require_once __DIR__ . '/../src/helpers.php';
-require_once __DIR__ . '/../src/db.php';
+require_once __DIR__ . '/../../src/helpers.php';
+require_once __DIR__ . '/../../src/db.php';
 // config.php is included to ensure DB_PATH is available for get_db_connection()
 // and ITEMS_PER_PAGE for default limit.
-require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../../config/config.php';
 
 // Set default content type early. helpers.php functions will also set it.
 header('Content-Type: application/json');

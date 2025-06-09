@@ -1,11 +1,11 @@
 <?php
 
 // 1. Include necessary files
-require_once __DIR__ . '/../src/helpers.php';
-require_once __DIR__ . '/../src/db.php';
-require_once __DIR__ . '/../config/config.php'; // For DB_PATH, SMTP settings
-require_once __DIR__ . '/../src/classes/SmtpMailer.php'; // Actual mailer class
-// require_once __DIR__ . '/../vendor/autoload.php'; // If using libraries like Ramsey UUID for IDs
+require_once __DIR__ . '/../../src/helpers.php';
+require_once __DIR__ . '/../../src/db.php';
+require_once __DIR__ . '/../../config/config.php'; // For DB_PATH, SMTP settings
+require_once __DIR__ . '/../../src/classes/SmtpMailer.php'; // Actual mailer class
+// require_once __DIR__ . '/../../vendor/autoload.php'; // If using libraries like Ramsey UUID for IDs
 
 // Set default content type
 header('Content-Type: application/json');
