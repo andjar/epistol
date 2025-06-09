@@ -245,8 +245,6 @@ async setPostStatus(emailId, userId, status) {
  * @returns {HTMLElement} A div element representing the thread.
  */
 window.renderThread = function(threadData, threadSubject, currentUserId) {
-    console.log("renderThread called with:", { threadData, threadSubject, currentUserId }); // Debug input
-
     const threadDiv = document.createElement('div');
     threadDiv.className = 'thread';
     threadDiv.dataset.threadId = threadData.thread_id;
@@ -274,20 +272,15 @@ window.renderThread = function(threadData, threadSubject, currentUserId) {
     emailsDiv.className = 'thread-emails';
 
     if (threadData.emails && threadData.emails.length > 0) {
-        console.log("Thread has emails to render:", threadData.emails.length); // Debug email count
         threadData.emails.forEach(email => {
-            console.log("Rendering email:", email); // Log each email object being rendered
-
             const emailDiv = document.createElement('div');
             emailDiv.className = 'email-summary';
             emailDiv.dataset.emailId = email.email_id;
 
             // Consider null or undefined status as 'unread' for robustness
             if (email.status === 'unread' || email.status === null || typeof email.status === 'undefined') {
-                console.log("Email marked as unread:", email.email_id, "status:", email.status); // Debug unread status
                 emailDiv.classList.add('email-unread');
             } else {
-                console.log("Email marked as read:", email.email_id, "status:", email.status); // Debug read status
                 emailDiv.classList.remove('email-unread');
             }
 
