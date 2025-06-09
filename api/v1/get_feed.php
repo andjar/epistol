@@ -106,18 +106,37 @@ try {
     $stmt_paginated_ids->execute();
     $paginated_thread_ids = $stmt_paginated_ids->fetchAll(PDO::FETCH_COLUMN);
 
+    // Always run count query for pagination metadata, regardless of whether the current page has threads.
+    $count_sql_parts = ["SELECT COUNT(DISTINCT t.id) FROM threads t"];
+    $count_bindings = [];
+
+    if ($group_id_filter_val) {
+        $count_sql_parts[] = "WHERE t.group_id = :group_id_filter_count";
+        $count_bindings[':group_id_filter_count'] = $group_id_filter_val;
+    }
+    $count_sql = implode(" ", $count_sql_parts);
+    // Status filter is not applied to total count, maintaining original behavior.
+
+    $count_stmt = $pdo->prepare($count_sql);
+    foreach ($count_bindings as $key_count => $value_count) {
+        $count_stmt->bindValue($key_count, $value_count, is_int($value_count) ? PDO::PARAM_INT : PDO::PARAM_STR);
+    }
+    $count_stmt->execute();
+    $total_items = (int)$count_stmt->fetchColumn();
+    $total_pages = ($limit > 0 && $total_items > 0) ? ceil($total_items / $limit) : 0;
+
     if (empty($paginated_thread_ids)) {
-        // No threads found for this page, send empty response with pagination info
+        // No threads found for this page, but return accurate pagination.
         send_json_success([
             'threads' => [],
             'pagination' => [
                 'current_page' => $page,
                 'per_page' => $limit,
-                'total_items' => 0, // Will be updated by count query later if needed, but 0 for now
-                'total_pages' => 0
+                'total_items' => $total_items,
+                'total_pages' => $total_pages
             ]
         ]);
-        // Exiting here as no further processing is needed
+        exit; // Terminate script to prevent multiple responses.
     }
 
     // Build placeholder string for IN clause
@@ -186,24 +205,6 @@ try {
     $stmt->execute();
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Count query for total items
-    $count_sql_parts = ["SELECT COUNT(DISTINCT t.id) FROM threads t"];
-    $count_bindings = [];
-
-    if ($group_id_filter_val) {
-        $count_sql_parts[] = "WHERE t.group_id = :group_id_filter_count";
-        $count_bindings[':group_id_filter_count'] = $group_id_filter_val;
-    }
-    $count_sql = implode(" ", $count_sql_parts);
-    // Status filter is not applied to total count, maintaining original behavior.
-
-    $count_stmt = $pdo->prepare($count_sql);
-    foreach ($count_bindings as $key_count => $value_count) {
-        $count_stmt->bindValue($key_count, $value_count, is_int($value_count) ? PDO::PARAM_INT : PDO::PARAM_STR);
-    }
-    $count_stmt->execute();
-    $total_items = (int)$count_stmt->fetchColumn();
-
     // 5. Data Processing
     $processed_threads = [];
     $threads_map = [];
@@ -251,14 +252,6 @@ try {
         $current_thread_processed_data['participants'] = $participant_names;
         $processed_threads[] = $current_thread_processed_data;
     }
-
-    // The total_items and total_pages calculation was moved up for early exit.
-    // Recalculate total_pages based on potentially new total_items
-    $total_pages = ($limit > 0 && $total_items > 0) ? ceil($total_items / $limit) : 0;
-    if ($total_items == 0) {
-        $page = 0; // If no items, current page can be considered 0 or 1.
-    }
-
 
     // 6. Success Response
     $response_data = [
