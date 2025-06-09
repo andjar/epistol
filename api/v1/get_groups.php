@@ -96,8 +96,6 @@ try {
     $total_stmt = $pdo->query("SELECT COUNT(*) FROM groups");
     $total_groups = (int)$total_stmt->fetchColumn();
     $total_pages = ($limit > 0 && $total_groups > 0) ? ceil($total_groups / $limit) : 0;
-    if($total_groups == 0) $page = 0;
-
 
     send_json_success([
         'groups' => $groups,

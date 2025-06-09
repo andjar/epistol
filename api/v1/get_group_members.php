@@ -121,7 +121,6 @@ try {
     $total_stmt->execute();
     $total_members = (int)$total_stmt->fetchColumn();
     $total_pages = ($limit > 0 && $total_members > 0) ? ceil($total_members / $limit) : 0;
-    if ($total_members == 0) $page = 0;
 
 
     send_json_success([

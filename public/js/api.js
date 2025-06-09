@@ -126,7 +126,7 @@ async function getProfile(personId) {
         throw new Error("Person ID is required to fetch profile.");
     }
     try {
-        const response = await fetch(`../api/v1/get_profile.php?id=${encodeURIComponent(personId)}`);
+        const response = await fetch(`../api/v1/get_profile.php?person_id=${encodeURIComponent(personId)}`);
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Error fetching profile:', response.status, response.statusText, errorText);
