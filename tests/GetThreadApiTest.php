@@ -26,18 +26,41 @@ class GetThreadApiTest extends BaseApiTest
     protected function tearDown(): void
     {
         // Order of deletion matters due to foreign key constraints.
-        $this->executeSql("DELETE FROM attachments WHERE id IN (" . implode(',', array_map('intval', $this->testAttachmentIds)) . ")", $this->testAttachmentIds);
-        $this->executeSql("DELETE FROM email_statuses WHERE email_id IN (" . implode(',', array_map('intval', $this->testEmailIds)) . ")");
-        $this->executeSql("DELETE FROM emails WHERE id IN (" . implode(',', array_map('intval', $this->testEmailIds)) . ")", $this->testEmailIds);
-        $this->executeSql("DELETE FROM threads WHERE id IN (" . implode(',', array_map('intval', $this->testThreadIds)) . ")", $this->testThreadIds);
+        // Use prepared statements to prevent SQL injection and handle empty arrays gracefully.
+
+        if (!empty($this->testAttachmentIds)) {
+            $placeholders = implode(',', array_fill(0, count($this->testAttachmentIds), '?'));
+            $this->executeSql("DELETE FROM attachments WHERE id IN ($placeholders)", $this->testAttachmentIds);
+        }
+
+        if (!empty($this->testEmailIds)) {
+            $placeholders = implode(',', array_fill(0, count($this->testEmailIds), '?'));
+            $this->executeSql("DELETE FROM email_statuses WHERE email_id IN ($placeholders)", $this->testEmailIds);
+            $this->executeSql("DELETE FROM emails WHERE id IN ($placeholders)", $this->testEmailIds);
+        }
+
+        if (!empty($this->testThreadIds)) {
+            $placeholders = implode(',', array_fill(0, count($this->testThreadIds), '?'));
+            $this->executeSql("DELETE FROM threads WHERE id IN ($placeholders)", $this->testThreadIds);
+        }
 
         // Clean up persons and users created by tests, be careful with shared users.
-        // Example: if users 1 and 2 are standard test users from BaseApiTest, don't delete them here unless specifically managed.
-        // For users created in these tests with dynamic IDs:
-        $this->executeSql("UPDATE users SET person_id = NULL WHERE id IN (" . implode(',', array_map('intval', $this->testUserIds)) . ")");
-        $this->executeSql("DELETE FROM persons WHERE id IN (" . implode(',', array_map('intval', $this->testPersonIds)) . ")", $this->testPersonIds);
-        $this->executeSql("DELETE FROM users WHERE id IN (" . implode(',', array_map('intval', array_filter($this->testUserIds, fn($id) => $id > 0))) . ")", array_filter($this->testUserIds, fn($id) => $id > 0));
+        if (!empty($this->testUserIds)) {
+            $placeholders = implode(',', array_fill(0, count($this->testUserIds), '?'));
+            $this->executeSql("UPDATE users SET person_id = NULL WHERE id IN ($placeholders)", $this->testUserIds);
+        }
 
+        if (!empty($this->testPersonIds)) {
+            $placeholders = implode(',', array_fill(0, count($this->testPersonIds), '?'));
+            $this->executeSql("DELETE FROM persons WHERE id IN ($placeholders)", $this->testPersonIds);
+        }
+
+        $deletableUserIds = array_filter($this->testUserIds, fn ($id) => $id > 0);
+        if (!empty($deletableUserIds)) {
+            $params = array_values($deletableUserIds); // Re-index for PDO
+            $placeholders = implode(',', array_fill(0, count($params), '?'));
+            $this->executeSql("DELETE FROM users WHERE id IN ($placeholders)", $params);
+        }
 
         $this->testUserIds = [];
         $this->testPersonIds = [];
