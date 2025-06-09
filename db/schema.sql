@@ -3,7 +3,7 @@ CREATE TABLE persons (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(255),
     avatar_url VARCHAR(255),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Email Addresses table (New - linked to persons)
@@ -12,7 +12,7 @@ CREATE TABLE email_addresses (
     person_id INTEGER NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
     email_address VARCHAR(255) NOT NULL,
     is_primary BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (person_id, email_address),
     UNIQUE (email_address) -- Ensuring email addresses themselves are unique across the system
 );
@@ -24,7 +24,7 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     person_id INTEGER UNIQUE REFERENCES persons(id) ON DELETE SET NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Groups table (Kept as is)
@@ -33,7 +33,7 @@ CREATE TABLE groups (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     created_by_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Threads table (New)
@@ -42,8 +42,8 @@ CREATE TABLE threads (
     subject VARCHAR(255) NOT NULL,
     created_by_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL, -- Optional: if a whole thread can belong to a group
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_activity_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_activity_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Emails table (Replaces Posts table)
@@ -56,7 +56,7 @@ CREATE TABLE emails (
     subject VARCHAR(255), -- Individual email subject, can be inherited
     body_text TEXT, -- Changed from 'content'
     body_html TEXT, -- For HTML emails
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- Kept from posts.created_at
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP, -- Kept from posts.created_at
     message_id_header VARCHAR(255) UNIQUE -- Common for emails, e.g. <uuid@domain.com>
 );
 
@@ -64,7 +64,7 @@ CREATE TABLE emails (
 CREATE TABLE group_members (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
-    joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, group_id) -- Composite primary key
 );
 
@@ -74,7 +74,7 @@ CREATE TABLE email_statuses (
     email_id INTEGER NOT NULL REFERENCES emails(id) ON DELETE CASCADE, -- Renamed from post_id
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     status VARCHAR(255) NOT NULL, -- e.g., 'read', 'unread', 'archived', 'deleted'
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Email Recipients table (New - links emails to their recipients)
@@ -96,7 +96,7 @@ CREATE TABLE attachments (
     mimetype VARCHAR(255) NOT NULL,
     filesize_bytes INTEGER NOT NULL,
     filepath_on_disk VARCHAR(255) NOT NULL UNIQUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Indexes for faster lookups
