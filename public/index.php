@@ -100,7 +100,7 @@
     </div>
 
     <footer>
-        <p>&copy; 2023 Epistol</p>
+        <p>&copy; 2025 Epistol</p>
     </footer>
     <script src="js/api.js?v=<?php echo time(); ?>"></script>
     <script src="js/app.js?v=<?php echo time(); ?>"></script>

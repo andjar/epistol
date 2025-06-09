@@ -1,22 +1,29 @@
-/* === CSS Variables === */
+/* === CSS Variables (Adjusted for social media look) === */
 :root {
     --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --body-bg: #F8F9FA;
+    --body-bg: #F0F2F5; /* Light gray, common for social feeds */
     --top-bar-bg: #FFFFFF;
-    --sidebar-bg: #F1F3F5;
-    --main-content-bg: #FFFFFF;
+    --sidebar-bg: #F8F9FA; /* Slightly off-white for sidebar if different from body */
+    --main-content-bg: transparent; /* Main content area can be transparent if body-bg is set */
     --card-bg: #FFFFFF;
-    --card-border-color: #E0E0E0;
-    --text-color: #212529;
-    --text-color-muted: #6C757D;
-    --primary-color: #007AFF; /* Apple's blue, clean and modern */
-    --primary-color-darker: #0056B3;
-    --accent-color: #34C759; /* Apple's green */
-    --accent-color-darker: #28a745;
+    --card-border-color: #DADDE1; /* Subtle border for cards */
+    --post-separator-color: #E4E6EB; /* Separator between posts or sections */
+    
+    --text-color-primary: #050505; /* Very dark gray / black for main text */
+    --text-color-secondary: #65676B; /* Medium gray for secondary text (timestamps, meta) */
+    --text-color-tertiary: #8A8D91; /* Lighter gray for less important meta */
+    
+    --link-color: #007AFF; /* Primary link color */
+    --link-color-hover: #0056B3;
+
+    --action-button-color: #606770; /* Default color for action text/icons */
+    --action-button-hover-bg: rgba(0,0,0,0.05); /* Subtle hover for actions */
+
     --border-radius-sm: 4px;
-    --border-radius-md: 8px;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
-    --shadow-md: 0 3px 8px rgba(0,0,0,0.07);
+    --border-radius-md: 8px; /* Standard card radius */
+    --border-radius-lg: 12px; /* For larger elements if needed */
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 /* === Global Reset & Base Styles === */
@@ -28,12 +35,12 @@
 
 body {
     font-family: var(--font-family-sans);
-    line-height: 1.6;
+    line-height: 1.5; /* Adjusted for post readability */
     margin: 0;
-    padding: 0; /* Padding-top will be added by .main-container to account for fixed top-bar */
+    padding: 0; 
     background-color: var(--body-bg);
-    color: var(--text-color);
-    font-size: 16px;
+    color: var(--text-color-primary);
+    font-size: 15px; /* Common base for social UI */
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -43,11 +50,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 a {
-    color: var(--primary-color);
+    color: var(--link-color);
     text-decoration: none;
 }
 a:hover {
-    color: var(--primary-color-darker);
+    color: var(--link-color-hover);
     text-decoration: underline;
 }
 
@@ -75,46 +82,44 @@ img {
 
 #top-bar .logo-area h1 {
     font-size: 1.5em;
-    color: var(--text-color);
+    color: var(--text-color-primary);
     margin: 0;
 }
 
 #top-bar .search-area {
-    flex-grow: 0.5; /* Allow it to take some space but not too much */
+    flex-grow: 0.5; 
     display: flex;
     align-items: center;
 }
 
 #search-field {
     width: 100%;
-    max-width: 400px; /* Max width for search */
+    max-width: 400px; 
     padding: 8px 12px;
     font-size: 0.95em;
-    border: 1px solid #DEE2E6; /* Light gray border */
+    border: 1px solid #DEE2E6; 
     border-radius: var(--border-radius-sm);
-    background-color: #F1F3F5; /* Slightly off-white */
+    background-color: #F1F3F5; 
 }
 #search-field:focus {
     background-color: var(--top-bar-bg);
-    border-color: var(--primary-color);
+    border-color: var(--link-color);
     outline: none;
     box-shadow: 0 0 0 2px rgba(0,123,255,.25);
 }
-/* Placeholder for search icon if added via CSS */
 #search-field + i {
-    margin-left: -25px; /* Adjust to position icon inside the input */
-    color: var(--text-color-muted);
+    margin-left: -25px; 
+    color: var(--text-color-secondary);
 }
 
 
 #top-bar .navigation-menus {
-    /* Placeholder styling */
     margin-left: 20px;
-    color: var(--text-color-muted);
+    color: var(--text-color-secondary);
 }
 
-#new-email-btn {
-    background-color: var(--accent-color);
+#new-email-btn { /* This button can remain somewhat prominent for a key action */
+    background-color: var(--action-button-color);
     color: white;
     padding: 0.5rem 1rem;
     border: none;
@@ -125,14 +130,14 @@ img {
     transition: background-color 0.2s ease-in-out;
 }
 #new-email-btn:hover {
-    background-color: var(--accent-color-darker);
+    background-color: var(--action-button-hover-bg);
 }
 
 /* === Layout: Main Container === */
 .main-container {
     display: flex;
-    padding-top: 60px; /* Height of the top-bar */
-    min-height: calc(100vh - 60px); /* Ensure it takes at least full viewport height minus top bar */
+    padding-top: 60px; 
+    min-height: calc(100vh - 60px); 
 }
 
 /* === Layout: Sidebars === */
@@ -140,7 +145,7 @@ img {
     width: 280px;
     background-color: var(--sidebar-bg);
     padding: 20px;
-    height: calc(100vh - 60px); /* Full height minus top bar */
+    height: calc(100vh - 60px); 
     overflow-y: auto;
     border-right: 1px solid var(--card-border-color);
     transition: width 0.3s ease;
@@ -149,15 +154,14 @@ img {
     /* Specific styles if any, default is from .sidebar */
 }
 #right-sidebar {
-    width: 240px; /* Can be different from left */
+    width: 240px; 
     border-right: none;
     border-left: 1px solid var(--card-border-color);
 }
 #right-sidebar h2, #right-sidebar p {
-    color: var(--text-color-muted);
+    color: var(--text-color-secondary);
 }
 
-/* Collapsed state for left sidebar (from original JS logic) */
 #left-sidebar.collapsed {
     width: 0;
     padding: 0;
@@ -166,30 +170,34 @@ img {
 #left-sidebar.collapsed > *:not(#toggle-groups-sidebar-btn) {
     display: none;
 }
-#toggle-groups-sidebar-btn { /* Style for the toggle button */
+
+/* Minimalist Sidebar Button Styling */
+#toggle-groups-sidebar-btn { 
     display: block;
     width: 100%;
     padding: 10px;
     margin-bottom: 15px;
-    background-color: var(--text-color-muted);
-    color: white;
-    border: none;
+    background-color: transparent; /* Toned down */
+    color: var(--text-color-secondary); /* Toned down */
+    border: 1px solid var(--card-border-color); /* Subtle border */
     border-radius: var(--border-radius-sm);
     cursor: pointer;
     font-size: 0.9em;
     text-align: center;
+    font-weight: 500;
 }
 #toggle-groups-sidebar-btn:hover {
-    background-color: #5a6268;
+    background-color: #E9ECEF; /* Light hover */
+    color: var(--text-color-primary);
 }
 
 
 /* === Layout: Main Content === */
 #main-content {
     flex-grow: 1;
-    background-color: var(--main-content-bg);
-    padding: 25px;
-    height: calc(100vh - 60px); /* Full height minus top bar */
+    background-color: var(--main-content-bg); /* Can be transparent */
+    padding: 15px; /* Reduced padding for tighter feed */
+    height: calc(100vh - 60px); 
     overflow-y: auto;
 }
 
@@ -197,102 +205,243 @@ img {
     /* No specific background needed if #main-content has it */
 }
 
-/* === Email Thread/Card Styling === */
+/* === Email Thread/Card Styling (Social Media Post Inspired) === */
+
+/* The .thread element is the main container for a conversation/feed item. */
 .thread {
     background-color: var(--card-bg);
     border: 1px solid var(--card-border-color);
     border-radius: var(--border-radius-md);
-    margin-bottom: 20px;
-    padding: 15px 20px;
+    margin-bottom: 12px; /* Space between threads */
     box-shadow: var(--shadow-sm);
-    transition: box-shadow 0.2s ease-in-out;
 }
 .thread:hover {
     box-shadow: var(--shadow-md);
 }
 
-.thread-subject {
-    font-size: 1.15em; /* Minimalistic */
-    font-weight: 600; /* Still clear */
-    color: var(--text-color);
-    margin-bottom: 8px;
-}
-
-.thread-participants {
-    font-size: 0.85em;
-    color: var(--text-color-muted);
-    margin-bottom: 8px;
-}
-.thread-last-reply {
+/* The subject of the thread, acts as a title for the grouped posts. */
+.thread-overall-title { /* Optional title for the whole thread, if used */
     font-size: 0.8em;
-    color: var(--text-color-muted);
-    margin-bottom: 12px;
-}
-
-/* Group Indicator Placeholder */
-.thread .group-indicator {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background-color: var(--primary-color); /* Example color */
-    margin-right: 8px;
-    vertical-align: middle;
-}
-
-
-.thread-emails {
-    margin-top: 15px;
-    padding-left: 15px;
-    border-left: 3px solid #E9ECEF; /* Lighter, more subtle border */
-}
-
-.email-summary {
-    padding: 12px 0; /* Padding top/bottom, no side padding needed due to .thread-emails */
-    margin-bottom: 10px;
-    border-bottom: 1px dashed #F1F3F5; /* Very subtle separator */
-}
-.email-summary:last-child {
+    font-weight: 500;
+    color: var(--text-color-tertiary);
+    padding: 8px 12px 0;
     margin-bottom: 0;
-    border-bottom: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.email-sender {
-    font-size: 0.95em;
-    margin-bottom: 5px;
-}
-.email-sender .sender-link { /* Emphasize sender's name */
-    font-weight: 600;
-    color: var(--text-color);
-}
-.email-sender .sender-link:hover {
-    color: var(--primary-color);
+/* Container for individual email "posts" within a thread. */
+.posts-container {
+    margin-top: 0;
+    padding-left: 0;
+    border-left: none;
 }
 
+/* Individual email message - This is styled as a "post". */
+.post-card {
+    padding: 12px 16px;
+}
+.post-card:not(:last-child) {
+    border-bottom: 1px solid var(--post-separator-color);
+}
 
-.email-preview {
-    font-size: 0.9em;
-    color: var(--text-color-muted);
+/* Header of an individual email "post" */
+.post-header {
+    display: flex;
+    align-items: flex-start; /* Align avatar top, text next to it */
     margin-bottom: 8px;
+}
+
+.post-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #CED0D4; /* Placeholder */
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 500;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.post-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.post-author-meta {
+    flex-grow: 1;
+}
+
+.post-author-line {
+    font-size: 0.9em; /* 13-14px approx */
+    line-height: 1.35;
+    margin-bottom: 2px;
+}
+.post-author-line .author-name {
+    font-weight: 600;
+    color: var(--text-color-primary);
+    text-decoration: none;
+}
+.post-author-line .author-name:hover {
+    text-decoration: underline;
+}
+.post-author-line .recipient-separator,
+.post-author-line .recipient-name {
+    color: var(--text-color-secondary);
+    font-weight: normal;
+}
+.post-timestamp {
+    font-size: 0.75em; /* 11-12px approx */
+    color: var(--text-color-secondary);
+    line-height: 1.2;
+}
+.post-options-menu {
+    margin-left: auto; /* Pushes options to the right */
+}
+.options-btn {
+    background: none;
+    border: none;
+    color: var(--text-color-secondary);
+    padding: 4px;
+    cursor: pointer;
+    border-radius: 50%;
+}
+.options-btn:hover {
+    background-color: var(--action-button-hover-bg);
+}
+.options-btn svg { display: block; }
+
+
+/* Post Content */
+.post-content {
+    font-size: 0.95em; /* 14-15px approx */
     line-height: 1.5;
+    color: var(--text-color-primary);
+    padding: 4px 0 12px 0; /* Remove left padding if avatar handles it */
+    word-wrap: break-word;
+}
+.post-content-subject { /* Subject for the first post, if included in content */
+    font-size: 1.1em;
+    font-weight: 600;
+    margin-bottom: 0.5em;
+    color: var(--text-color-primary);
+}
+.post-content p {
+    margin-top: 0;
+    margin-bottom: 0.75em;
+}
+.post-content p:last-child {
+    margin-bottom: 0;
 }
 
-.email-timestamp {
-    font-size: 0.75em;
-    color: var(--text-color-muted);
-    text-align: right;
+/* Post Footer (Actions & Status) */
+.post-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+    margin-top: 8px;
+    border-top: 1px solid var(--post-separator-color);
+}
+.post-actions {
+    display: flex;
+    gap: 8px; /* Gap between action buttons */
+}
+.post-actions .action-btn {
+    background: none;
+    border: none;
+    color: var(--action-button-color);
+    font-weight: 600;
+    font-size: 0.85em; /* ~13px */
+    padding: 6px 10px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    display: flex; /* For icon + text */
+    align-items: center;
+    gap: 4px;
+}
+.post-actions .action-btn:hover {
+    background-color: var(--action-button-hover-bg);
+    color: var(--text-color-primary);
+}
+.post-actions .action-btn i { /* Basic icon styling if using <i> tags */
+    font-size: 1.1em; 
 }
 
-.email-unread {
-    /* More subtle unread indication */
-    border-left-color: var(--primary-color) !important; /* Highlight for thread-emails border */
+
+/* Minimalist Select for Status (in post footer) */
+.post-status-selector-container {
+    /* Flex handled by .post-footer */
 }
-.email-unread .thread-subject,
-.email-unread .email-sender .sender-link {
-    font-weight: bold; /* Default unread emphasis */
-    color: var(--primary-color-darker) !important;
+.minimalist-select.post-status-select {
+    font-size: 0.8em; /* ~12px */
+    font-weight: 500;
+    color: var(--text-color-secondary);
+    border: 1px solid transparent; /* Initially transparent */
+    background-color: transparent;
+    padding: 4px 20px 4px 6px; /* Space for caret, less vertical padding */
+    border-radius: var(--border-radius-sm);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2210%22%20height%3D%2210%22%20fill%3D%22%2365676B%22%3E%3Cpath%20d%3D%22M0%202.5l5%205%205-5z%22/%3E%3C/svg%3E');
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    background-size: 8px 8px;
+    cursor: pointer;
+    min-width: 110px; /* Ensure enough space for text like "Follow-up" */
+    text-align: left;
+}
+.minimalist-select.post-status-select:hover {
+    background-color: var(--action-button-hover-bg);
+    border-color: var(--card-border-color); /* Subtle border on hover */
+}
+.minimalist-select.post-status-select:focus {
+    border-color: var(--link-color);
+    box-shadow: 0 0 0 2px rgba(0,123,255,.2);
+    background-color: var(--card-bg);
 }
 
+
+/* Unread email post indication */
+.post-card.email-unread .post-author-line .author-name,
+.post-card.email-unread .post-content-subject {
+    /* font-weight: 700; /* Bolder for unread */
+    /* color: var(--link-color); Could make unread prominent with link color */
+}
+.post-card.email-unread {
+    /* Add a subtle left border or slightly different background for unread posts */
+     /* border-left: 3px solid var(--link-color);
+     padding-left: 13px; /* Adjust if using border-left */
+}
+/* You might want a visual indicator like a blue dot for unread */
+.post-card.email-unread .post-author-meta::before {
+    /* content: '●';
+    color: var(--link-color);
+    font-size: 10px;
+    margin-right: 6px;
+    position: absolute;
+    left: 2px; top: 16px; /* Adjust positioning */
+}
+
+
+/* Hide original .thread-participants and .thread-last-reply if not fitting the new design */
+.thread-participants,
+.thread-last-reply {
+    display: none;
+}
+
+/* Adjust .group-indicator if it's still used within .thread-subject or elsewhere */
+.group-indicator {
+    /* Styles from previous iteration, review if needed */
+}
 
 /* === General UI Elements: Buttons === */
 button, input[type="submit"], input[type="button"] {
@@ -306,66 +455,70 @@ button, input[type="submit"], input[type="button"] {
 }
 button:focus, input[type="submit"]:focus, input[type="button"]:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(var(--primary-color), 0.35); /* Use primary color for focus */
+    box-shadow: 0 0 0 3px rgba(var(--link-color), 0.25); /* Adjusted opacity for focus */
 }
 button:disabled, input:disabled {
     opacity: 0.65;
     cursor: not-allowed !important;
 }
 
-/* Primary action button style (can be applied with a class e.g. .btn-primary) */
 .btn-primary {
-    background-color: var(--primary-color);
+    background-color: var(--link-color);
     color: white;
 }
 .btn-primary:hover {
-    background-color: var(--primary-color-darker);
+    background-color: var(--link-color-hover);
 }
 
 
-/* Sidebar specific button/input styling */
-#groups-sidebar input[type="text"],
-#groups-sidebar select {
-    width: 100%; /* Full width within sidebar */
+/* Sidebar specific input/select styling */
+#left-sidebar input[type="text"], /* Changed from #groups-sidebar */
+#left-sidebar select {
+    width: 100%; 
     padding: 10px;
     margin-bottom: 12px;
     border: 1px solid #CED4DA;
     border-radius: var(--border-radius-sm);
     font-size: 0.9em;
-    background-color: var(--main-content-bg); /* White background for inputs */
+    background-color: var(--main-content-bg); 
 }
-#groups-sidebar input[type="text"]:focus,
-#groups-sidebar select:focus {
-    border-color: var(--primary-color);
+#left-sidebar input[type="text"]:focus, /* Changed from #groups-sidebar */
+#left-sidebar select:focus {
+    border-color: var(--link-color);
     box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
     outline: none;
 }
 
-#groups-sidebar h2, #groups-sidebar h3 {
-    color: var(--text-color);
+#left-sidebar h2, #left-sidebar h3 { /* Changed from #groups-sidebar */
+    color: var(--text-color-primary);
     margin-bottom: 10px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #DEE2E6; /* Lighter border */
-    font-size: 1.1em;
+    border-bottom: 1px solid #DEE2E6; 
+    font-size: 1.05em; /* Slightly toned down */
+    font-weight: 500; /* Slightly toned down */
 }
-#groups-sidebar h3 {
-    font-size: 1em;
+#left-sidebar h3 { /* Changed from #groups-sidebar */
+    font-size: 0.95em; /* Toned down */
 }
 
+/* Minimalist Sidebar Create Group Button */
 #create-group-btn {
     width: 100%;
-    background-color: var(--accent-color);
-    color: white;
+    background-color: transparent; /* Toned down */
+    color: var(--link-color); /* Use primary color for action */
+    border: 1px solid var(--link-color); /* Outline style */
+    font-weight: 500;
 }
 #create-group-btn:hover {
-    background-color: var(--accent-color-darker);
+    background-color: rgba(0, 123, 255, 0.05); /* Subtle hover */
+    color: var(--link-color-hover);
 }
 
 
 .group-item {
-    padding: 10px;
-    margin-bottom: 8px;
-    background-color: #E9ECEF; /* Slightly darker than sidebar bg */
+    padding: 8px 10px; /* Slightly less padding */
+    margin-bottom: 6px; /* Slightly less margin */
+    background-color: #E9ECEF; 
     border: 1px solid #DEE2E6;
     border-radius: var(--border-radius-sm);
     display: flex;
@@ -378,37 +531,20 @@ button:disabled, input:disabled {
 }
 .group-item span {
     font-weight: 500;
+    font-size: 0.9em;
 }
-.view-group-members-btn { /* Example of secondary button */
-    background-color: var(--text-color-muted);
-    color: white;
-    font-size: 0.8em;
-    padding: 5px 8px;
+/* Minimalist Sidebar View Group Button */
+.view-group-members-btn { 
+    background-color: transparent; /* Toned down */
+    color: var(--text-color-secondary); /* Toned down */
+    border: 1px solid var(--card-border-color); /* Subtle border */
+    font-size: 0.75em; /* Smaller */
+    padding: 4px 8px; /* Smaller */
+    font-weight: 400;
 }
 .view-group-members-btn:hover {
-    background-color: #5a6268;
-}
-
-
-/* Email Actions Buttons */
-.email-actions {
-    margin-top: 15px;
-    padding-top: 10px;
-    border-top: 1px solid #F1F3F5; /* Very light border */
-    text-align: right;
-}
-.email-actions button {
-    background-color: transparent; /* Minimalist */
-    color: var(--primary-color);
-    border: 1px solid transparent; /* No border initially */
-    padding: 6px 10px;
-    margin-left: 8px;
-    font-size: 0.85em;
-}
-.email-actions button:hover {
-    background-color: #E9ECEF; /* Light background on hover */
-    border-color: #DEE2E6; /* Subtle border on hover */
-    color: var(--primary-color-darker);
+    background-color: #E0E0E0; /* Light hover */
+    color: var(--text-color-primary);
 }
 
 
@@ -422,26 +558,26 @@ button:disabled, input:disabled {
     width: 100%;
     height: 100%;
     overflow: auto;
-    background-color: rgba(0,0,0,0.55); /* Darker backdrop */
+    background-color: rgba(0,0,0,0.55); 
 }
 
 .modal-content {
     background-color: var(--main-content-bg);
-    margin: 8% auto; /* Slightly less top margin */
+    margin: 8% auto; 
     padding: 25px;
-    border: none; /* No border, rely on shadow */
+    border: none; 
     width: 90%;
-    max-width: 500px; /* Default max width */
+    max-width: 500px; 
     border-radius: var(--border-radius-md);
     position: relative;
     box-shadow: var(--shadow-md);
 }
 #compose-modal .modal-content {
-    max-width: 600px; /* Compose modal can be wider */
+    max-width: 600px; 
 }
 
 .close-btn {
-    color: var(--text-color-muted);
+    color: var(--text-color-secondary);
     position: absolute;
     top: 15px;
     right: 20px;
@@ -450,7 +586,7 @@ button:disabled, input:disabled {
     opacity: 0.7;
 }
 .close-btn:hover, .close-btn:focus {
-    color: var(--text-color);
+    color: var(--text-color-primary);
     text-decoration: none;
     cursor: pointer;
     opacity: 1;
@@ -463,8 +599,8 @@ button:disabled, input:disabled {
 #compose-form label {
     display: block;
     margin-bottom: 5px;
-    font-weight: 500; /* Slightly less bold */
-    color: var(--text-color);
+    font-weight: 500; 
+    color: var(--text-color-primary);
     font-size: 0.9em;
 }
 #compose-form input[type="email"],
@@ -479,7 +615,7 @@ button:disabled, input:disabled {
     background-color: var(--main-content-bg);
 }
 #compose-form input:focus, #compose-form textarea:focus {
-    border-color: var(--primary-color);
+    border-color: var(--link-color);
     box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
     outline: none;
 }
@@ -492,14 +628,14 @@ button:disabled, input:disabled {
     margin-top: 20px;
 }
 #compose-form button[type="submit"] {
-    background-color: var(--primary-color);
+    background-color: var(--link-color);
     color: white;
 }
 #compose-form button[type="submit"]:hover {
-    background-color: var(--primary-color-darker);
+    background-color: var(--link-color-hover);
 }
-#compose-form button[type="button"] { /* Cancel button */
-    background-color: var(--text-color-muted);
+#compose-form button[type="button"] { 
+    background-color: var(--text-color-secondary);
     color: white;
 }
 #compose-form button[type="button"]:hover {
@@ -510,10 +646,10 @@ button:disabled, input:disabled {
 footer {
     text-align: center;
     padding: 1.5rem 1rem;
-    margin-top: auto; /* Pushes footer to bottom if content is short, works with flex container */
+    margin-top: auto; 
     font-size: 0.85em;
-    color: var(--text-color-muted);
-    background-color: var(--sidebar-bg); /* Match sidebar bg */
+    color: var(--text-color-secondary);
+    background-color: var(--sidebar-bg); 
     border-top: 1px solid var(--card-border-color);
 }
 
@@ -528,7 +664,7 @@ footer {
     text-align: center;
     padding: 15px;
     font-size: 1.2em;
-    color: var(--primary-color);
+    color: var(--link-color);
     border-bottom: 1px solid var(--card-border-color);
     box-shadow: var(--shadow-sm);
     display: none;
@@ -537,11 +673,8 @@ footer {
 
 /* === Responsive Design === */
 
-/* Medium screens - Tablet layout adjustments */
 @media (max-width: 992px) {
     #left-sidebar {
-        /* Example: Could be hidden by default and toggled via a button in top-bar */
-        /* For now, let's reduce its width */
         width: 220px;
     }
     #right-sidebar {
@@ -553,10 +686,9 @@ footer {
 }
 
 
-/* Small screens - Mobile layout adjustments */
 @media (max-width: 768px) {
     #top-bar {
-        height: auto; /* Allow wrapping */
+        height: auto; 
         flex-direction: column;
         padding: 10px;
         align-items: flex-start;
@@ -569,15 +701,15 @@ footer {
 
     .main-container {
         flex-direction: column;
-        padding-top: 0; /* Top bar is part of normal flow now */
+        padding-top: 0; 
     }
-    #top-bar { position: relative; } /* Unfix top bar */
+    #top-bar { position: relative; } 
 
 
     .sidebar {
-        width: 100% !important; /* Full width */
-        height: auto; /* Auto height */
-        max-height: 40vh; /* Limit height, enable scroll */
+        width: 100% !important; 
+        height: auto; 
+        max-height: 40vh; 
         border-right: none;
         border-bottom: 1px solid var(--card-border-color);
     }
@@ -587,8 +719,8 @@ footer {
     }
 
     #main-content {
-        height: auto; /* Auto height */
-        padding: 15px;
+        height: auto; 
+        padding: 8px;
     }
 
     .modal-content {
@@ -603,29 +735,30 @@ footer {
     }
     #compose-form button:last-child { margin-bottom: 0; }
 
-    .email-actions button {
-        width: calc(50% - 5px);
-        margin: 0 2.5px 5px;
-    }
+    .post-card { padding: 10px 12px; }
+    .post-avatar { width: 32px; height: 32px; font-size: 16px; margin-right: 8px; }
+    .post-author-line { font-size: 0.85em; }
+    .post-timestamp { font-size: 0.7em; }
+    .post-content { font-size: 0.9em; }
+    .post-footer { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .post-actions { width: 100%; justify-content: space-around; } /* Spread actions on mobile */
+    .post-actions .action-btn { padding: 8px 5px; font-size: 0.8em; flex-grow: 1; text-align: center; }
+    .minimalist-select.post-status-select { width: 100%; }
 }
 
 @media (max-width: 480px) {
     body { font-size: 15px; }
     #main-content { padding: 10px; }
     .thread { padding: 10px 15px; }
-    .email-actions button { width: 100%; margin: 0 0 8px 0; }
+    .post-actions .action-btn span { /* Hide text on very small screens, show only icon */
+        /* display: none; */ /* Requires icons to be present */
+    }
+     .post-actions .action-btn { font-size: 0.75em; }
+    .thread-overall-title { font-size: 1.1em; } /* Adjust subject for smaller screens */
+    .post-content { font-size: 0.9em; } /* Adjust preview for smaller screens */
 }
 
-/* Cleanup of some old specific styles that might conflict */
-header { /* Old header is now #top-bar */
-    /* Styles here are mostly superseded or moved */
-}
-.main-layout { /* Old main container is now .main-container */
-    /* Superseded */
-}
-/* Styles for #groups-sidebar, #feed-container are largely covered by .sidebar, #main-content */
 
-/* Specifics for profile/group pages from old CSS - integrate if needed */
 .page-container {
     max-width: 900px;
     margin: 20px auto;
@@ -635,30 +768,40 @@ header { /* Old header is now #top-bar */
     box-shadow: var(--shadow-sm);
 }
 .page-container h1 {
-    color: var(--primary-color-darker);
+    color: var(--link-color-hover);
     border-bottom: 1px solid var(--card-border-color);
     padding-bottom: 10px;
     margin-bottom: 20px;
     font-size: 1.6em;
 }
 
-/* Ensure any remaining old styles are either removed or updated if they conflict.
-   This is a broad refactor, so careful testing is needed. */
 #status-filter-section, #group-filter-section {
     margin-bottom: 20px;
 }
 
+/* Minimalist Sidebar Filters */
 select#status-feed-filter, select#group-feed-filter {
-     width: 100%;
-    padding: 10px;
+    width: 100%;
+    padding: 8px 10px; /* Slightly reduced padding */
     margin-bottom: 12px;
-    border: 1px solid #CED4DA;
+    border: 1px solid #DEE2E6; /* Lighter border */
     border-radius: var(--border-radius-sm);
-    font-size: 0.9em;
-    background-color: var(--main-content-bg);
+    font-size: 0.85em; /* Smaller font */
+    background-color: var(--body-bg); /* Match body bg for subtlety */
+    color: var(--text-color-secondary);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2210%22%20height%3D%2210%22%20fill%3D%22%236C757D%22%3E%3Cpath%20d%3D%22M0%202.5l5%205%205-5z%22/%3E%3C/svg%3E');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 8px 8px;
+    padding-right: 30px; /* Space for caret */
 }
 select#status-feed-filter:focus, select#group-feed-filter:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    border-color: var(--link-color);
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.2); /* Softer focus */
     outline: none;
+    background-color: var(--main-content-bg); /* White on focus for clarity */
+    color: var(--text-color-primary);
 }
