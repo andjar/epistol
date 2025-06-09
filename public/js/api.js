@@ -236,191 +236,135 @@ async setPostStatus(emailId, userId, status) {
 };
 
 /**
+ * Renders an individual email as a "post" card.
+ * @param {Object} email - The email data object.
+ * @param {string} threadSubject - The subject of the parent thread.
+ * @param {number} currentUserId - The ID of the current user.
+ * @param {boolean} isFirstInThread - True if this is the first email in the thread.
+ * @returns {string} HTML string for the email post.
+ */
+window.renderEmailAsPost = function(email, threadSubject, currentUserId, isFirstInThread) {
+    const isUnread = email.read_receipts && !email.read_receipts.some(r => r.user_id === currentUserId && r.read_at);
+    const unreadClass = isUnread ? 'email-unread' : '';
+    const firstPostClass = isFirstInThread ? 'is-first-post' : 'is-reply-post'; // Differentiate first vs. replies
+
+    // Format timestamp (simplified)
+    const timestamp = new Date(email.timestamp).toLocaleString([], {
+        month: 'short', day: 'numeric', year: (new Date(email.timestamp).getFullYear() !== new Date().getFullYear()) ? 'numeric' : undefined,
+        hour: 'numeric', minute: '2-digit', hour12: true
+    });
+
+    // Simplified recipient display: For "Sender ▸ Recipient", show first recipient or "Group" if applicable
+    // This would need more logic if you have group names associated with emails or want to list multiple recipients.
+    let recipientDisplay = email.recipients && email.recipients.length > 0 ? email.recipients[0].name : 'Recipients';
+    if (email.group_id && email.group_name) { // Assuming group_name is available if group_id is present
+        recipientDisplay = email.group_name;
+    } else if (email.recipients && email.recipients.length > 1) {
+        recipientDisplay = `${email.recipients[0].name} + ${email.recipients.length - 1} more`;
+    }
+
+    // User status for this email (placeholder logic)
+    // You'd fetch this from email.user_specific_status or similar
+    const userStatus = email.user_specific_statuses && email.user_specific_statuses.find(s => s.user_id === currentUserId)?.status || 'default';
+    const statusLabels = {
+        'read': 'Read',
+        'unread': 'Unread',
+        'follow-up': 'Follow-up',
+        'important-info': 'Important',
+        'default': 'Set Status' // Default if no status or unknown
+    };
+    const currentStatusLabel = statusLabels[userStatus] || 'Set Status';
+
+    // Create a string for all recipients for "Reply All"
+    // This needs to be more robust in a real app (e.g., include CCs, filter out current user)
+    const allRecipientsForReplyAll = [email.sender_email, ...(email.recipients || []).map(r => r.email)].join(',');
+
+    return `
+        <div class="post-card ${unreadClass} ${firstPostClass}" data-email-id="${email.email_id}">
+            <div class="post-header">
+                <div class="post-avatar">
+                    <span>${email.sender_name ? email.sender_name.charAt(0).toUpperCase() : 'S'}</span>
+                </div>
+                <div class="post-author-meta">
+                    <div class="post-author-line">
+                        <a href="#" class="author-name" data-person-id="${email.sender_id || ''}">${email.sender_name || 'Unknown Sender'}</a>
+                        <span class="recipient-separator">▸</span>
+                        <span class="recipient-name">${recipientDisplay}</span>
+                    </div>
+                    <div class="post-timestamp">${timestamp}</div>
+                </div>
+                <div class="post-options-menu">
+                    <button class="options-btn" aria-label="More options">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path></svg>
+                    </button>
+                    <!-- Dropdown for status can go here or be integrated with post-actions -->
+                </div>
+            </div>
+
+            <div class="post-content">
+                ${isFirstInThread && threadSubject ? `<h4 class="post-content-subject">${threadSubject}</h4>` : ''}
+                ${email.body_html || `<p>${email.body_preview || 'No content'}</p>`}
+            </div>
+
+            <div class="post-footer">
+                <div class="post-actions">
+                    <button class="action-btn reply-to-email-btn" data-email-id="${email.email_id}" data-subject="${email.subject_for_reply || threadSubject}" data-sender="${email.sender_email}">
+                        <span>Reply</span>
+                    </button>
+                    <button class="action-btn reply-all-to-email-btn" data-email-id="${email.email_id}" data-subject="${email.subject_for_reply || threadSubject}" data-sender="${email.sender_email}" data-all-recipients="${allRecipientsForReplyAll}">
+                        <span>Reply All</span>
+                    </button>
+                    <button class="action-btn forward-email-btn" data-email-id="${email.email_id}" data-subject="${email.subject_for_reply || threadSubject}" data-original-sender="${email.sender_name}" data-original-date="${timestamp}" data-original-body="${email.body_preview || email.body_html}">
+                        <span>Forward</span>
+                    </button>
+                </div>
+                <div class="post-status-selector-container email-status-container">
+                     <span class="current-post-status" style="display:none;">Status: ${userStatus}</span> <!-- Hidden, for app.js logic if needed -->
+                     <select class="post-status-select minimalist-select" data-email-id="${email.email_id}">
+                        <option value="" ${userStatus === 'default' ? 'selected' : ''} disabled>${currentStatusLabel}</option>
+                        <option value="read" ${userStatus === 'read' ? 'selected' : ''}>Read</option>
+                        <option value="unread" ${userStatus === 'unread' ? 'selected' : ''}>Unread</option>
+                        <option value="follow-up" ${userStatus === 'follow-up' ? 'selected' : ''}>Follow-up</option>
+                        <option value="important-info" ${userStatus === 'important-info' ? 'selected' : ''}>Important</option>
+                     </select>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+/**
  * Renders a single thread object into an HTML element.
- * This function is now globally available via window.renderThread
  * @param {Object} threadData - The thread data object.
- * @param {string} threadSubject - The subject of the parent thread (passed for reply pre-fill).
- * Expected structure: { thread_id, subject, participants, last_reply_time, emails: [{ email_id, sender_name, body_preview, timestamp, status, sender_person_id, to_recipients, cc_recipients, attachments }] }
- * @param {number} currentUserId - The ID of the currently logged-in user, needed for status changes.
+ * @param {string} threadSubject - The subject of the parent thread (often from threadData.subject).
+ * @param {number} currentUserId - The ID of the current user.
  * @returns {HTMLElement} A div element representing the thread.
  */
 window.renderThread = function(threadData, threadSubject, currentUserId) {
-    const threadDiv = document.createElement('div');
-    threadDiv.className = 'thread';
-    threadDiv.dataset.threadId = threadData.thread_id;
+    const threadContainer = document.createElement('div');
+    threadContainer.className = 'thread';
+    threadContainer.dataset.threadId = threadData.thread_id;
 
-    const subjectH2 = document.createElement('h2');
-    subjectH2.className = 'thread-subject';
-    subjectH2.textContent = threadData.subject || 'No Subject';
-    threadDiv.appendChild(subjectH2);
+    // Optional: A very muted title for the overall thread, if desired *above* all posts.
+    // If the subject is prominent in the first post, this might be redundant.
+    // const threadTitleEl = document.createElement('h3');
+    // threadTitleEl.className = 'thread-overall-title';
+    // threadTitleEl.textContent = threadSubject;
+    // threadContainer.appendChild(threadTitleEl);
 
-    if (threadData.participants && threadData.participants.length > 0) {
-        const participantsP = document.createElement('p');
-        participantsP.className = 'thread-participants';
-        participantsP.textContent = 'Participants: ' + threadData.participants.join(', ');
-        threadDiv.appendChild(participantsP);
-    }
-
-    if (threadData.last_reply_time) {
-        const lastReplyP = document.createElement('p');
-        lastReplyP.className = 'thread-last-reply';
-        lastReplyP.textContent = 'Last reply: ' + new Date(threadData.last_reply_time).toLocaleString();
-        threadDiv.appendChild(lastReplyP);
-    }
-
-    const emailsDiv = document.createElement('div');
-    emailsDiv.className = 'thread-emails';
+    const postsContainer = document.createElement('div');
+    postsContainer.className = 'posts-container';
 
     if (threadData.emails && threadData.emails.length > 0) {
-        threadData.emails.forEach(email => {
-            const emailDiv = document.createElement('div');
-            emailDiv.className = 'email-summary';
-            emailDiv.dataset.emailId = email.email_id;
-
-            // Consider null or undefined status as 'unread' for robustness
-            if (email.status === 'unread' || email.status === null || typeof email.status === 'undefined') {
-                emailDiv.classList.add('email-unread');
-            } else {
-                emailDiv.classList.remove('email-unread');
-            }
-
-            const senderP = document.createElement('p');
-            senderP.className = 'email-sender';
-            const senderNameSpan = document.createElement('span');
-            senderNameSpan.className = 'sender-link';
-            senderNameSpan.textContent = email.sender_name || 'Unknown Sender';
-            if (email.sender_person_id) {
-                senderNameSpan.dataset.personId = email.sender_person_id;
-            } else {
-                senderNameSpan.classList.add('no-profile');
-            }
-            senderP.appendChild(document.createTextNode('From: '));
-            senderP.appendChild(senderNameSpan);
-            emailDiv.appendChild(senderP);
-
-            if (email.to_recipients && email.to_recipients.length > 0) {
-                const toP = document.createElement('p');
-                toP.className = 'email-recipients-to';
-                toP.textContent = `To: ${email.to_recipients.join(', ')}`;
-                emailDiv.appendChild(toP);
-            }
-            if (email.cc_recipients && email.cc_recipients.length > 0) {
-                const ccP = document.createElement('p');
-                ccP.className = 'email-recipients-cc';
-                ccP.textContent = `CC: ${email.cc_recipients.join(', ')}`;
-                emailDiv.appendChild(ccP);
-            }
-
-            const previewP = document.createElement('p');
-            previewP.className = 'email-preview';
-            previewP.textContent = email.body_preview || 'No preview available.';
-            emailDiv.appendChild(previewP);
-
-            if (email.timestamp) {
-                const timestampP = document.createElement('p');
-                timestampP.className = 'email-timestamp';
-                timestampP.textContent = new Date(email.timestamp).toLocaleString(undefined, {
-                    year: 'numeric', month: 'short', day: 'numeric',
-                    hour: 'numeric', minute: '2-digit', hour12: true
-                });
-                emailDiv.appendChild(timestampP);
-            }
-
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'email-actions';
-
-            const replyBtn = document.createElement('button');
-            replyBtn.className = 'reply-to-email-btn';
-            replyBtn.textContent = 'Reply';
-            replyBtn.dataset.emailId = email.email_id;
-            replyBtn.dataset.subject = threadData.subject || 'No Subject';
-            replyBtn.dataset.sender = email.sender_name || '';
-            replyBtn.dataset.toRecipients = email.to_recipients ? email.to_recipients.join(',') : (email.sender_name || '');
-            replyBtn.dataset.ccRecipients = email.cc_recipients ? email.cc_recipients.join(',') : '';
-            actionsDiv.appendChild(replyBtn);
-
-            const replyAllBtn = document.createElement('button');
-            replyAllBtn.className = 'reply-all-to-email-btn';
-            replyAllBtn.textContent = 'Reply All';
-            replyAllBtn.dataset.emailId = email.email_id;
-            replyAllBtn.dataset.subject = threadData.subject || 'No Subject';
-            replyAllBtn.dataset.sender = email.sender_name || '';
-            const allRecipients = [];
-            if (email.sender_name) allRecipients.push(email.sender_name);
-            if (email.to_recipients) allRecipients.push(...email.to_recipients);
-            if (email.cc_recipients) allRecipients.push(...email.cc_recipients);
-            const uniqueRecipients = [...new Set(allRecipients)];
-            replyAllBtn.dataset.allRecipients = uniqueRecipients.join(',');
-            actionsDiv.appendChild(replyAllBtn);
-
-            const forwardBtn = document.createElement('button');
-            forwardBtn.className = 'forward-email-btn';
-            forwardBtn.textContent = 'Forward';
-            forwardBtn.dataset.emailId = email.email_id;
-            forwardBtn.dataset.subject = threadData.subject || 'No Subject';
-            forwardBtn.dataset.originalSender = email.sender_name || 'Unknown Sender';
-            forwardBtn.dataset.originalDate = email.timestamp ? new Date(email.timestamp).toLocaleString(undefined, {
-                year: 'numeric', month: 'short', day: 'numeric',
-                hour: 'numeric', minute: '2-digit', hour12: true
-            }) : 'Unknown Date';
-            forwardBtn.dataset.originalBody = email.body_preview || 'No preview available.';
-            actionsDiv.appendChild(forwardBtn);
-
-            emailDiv.appendChild(actionsDiv);
-
-            // Display post status and controls
-            const statusDiv = document.createElement('div');
-            statusDiv.className = 'email-status-container';
-
-            const currentStatusSpan = document.createElement('span');
-            currentStatusSpan.className = 'current-post-status';
-            currentStatusSpan.textContent = `Status: ${email.status || 'unread'}`;
-            statusDiv.appendChild(currentStatusSpan);
-
-            const statusSelect = document.createElement('select');
-            statusSelect.className = 'post-status-select';
-            statusSelect.dataset.emailId = email.email_id;
-            // currentUserId will be added to dataset in app.js event listener if needed, or passed to setPostStatus directly
-
-            const statuses = ['read', 'follow-up', 'important-info', 'unread']; // 'unread' can be a way to reset or explicit state
-            statuses.forEach(statusValue => {
-                const option = document.createElement('option');
-                option.value = statusValue;
-                option.textContent = statusValue.charAt(0).toUpperCase() + statusValue.slice(1);
-                if (statusValue === (email.status || 'unread')) {
-                    option.selected = true;
-                }
-                statusSelect.appendChild(option);
-            });
-            statusDiv.appendChild(statusSelect);
-            emailDiv.appendChild(statusDiv);
-
-
-            if (email.attachments && email.attachments.length > 0) {
-                const attachmentsListDiv = document.createElement('div');
-                attachmentsListDiv.className = 'email-attachments-list';
-                const heading = document.createElement('h4');
-                heading.textContent = 'Attachments:';
-                attachmentsListDiv.appendChild(heading);
-                email.attachments.forEach(attachment => {
-                    const link = document.createElement('a');
-                    link.href = attachment.url || (attachment.file_id ? `/api/v1/download_attachment.php?file_id=${attachment.file_id}` : '#');
-                    link.textContent = attachment.filename;
-                    if (attachment.url || attachment.direct_url) {
-                        link.setAttribute('download', attachment.filename);
-                    }
-                    link.target = '_blank';
-                    attachmentsListDiv.appendChild(link);
-                });
-                emailDiv.appendChild(attachmentsListDiv);
-            }
-            emailsDiv.appendChild(emailDiv);
+        threadData.emails.forEach((email, index) => {
+            // Pass threadSubject to be potentially displayed in the first post's content
+            const emailPostHTML = window.renderEmailAsPost(email, threadSubject, currentUserId, index === 0);
+            postsContainer.innerHTML += emailPostHTML; // Append HTML string
         });
     } else {
-        const noEmailsP = document.createElement('p');
-        noEmailsP.textContent = 'No emails in this thread yet.';
-        emailsDiv.appendChild(noEmailsP);
+        postsContainer.innerHTML = '<p class="no-emails-in-thread">No messages in this conversation.</p>';
     }
-    threadDiv.appendChild(emailsDiv);
-    return threadDiv;
+
+    threadContainer.appendChild(postsContainer);
+    return threadContainer;
 };
