@@ -250,10 +250,16 @@ try {
             }
 
             foreach ($processed_attachments_for_mailer as $att) {
-                // Sanitize filename and ensure uniqueness
-                $safe_filename = preg_replace("/[^a-zA-Z0-9._-]/", "", basename($att['filename']));
+                // Sanitize filename to replace invalid characters with underscores, not remove them.
+                $safe_filename = preg_replace("/[^a-zA-Z0-9._-]/", "_", basename($att['filename']));
                 $file_extension = pathinfo($safe_filename, PATHINFO_EXTENSION);
                 $base_filename = pathinfo($safe_filename, PATHINFO_FILENAME);
+
+                // If sanitization results in an empty or meaningless filename (e.g., only underscores or dots), use a default.
+                if (trim($base_filename, '._-') === '') {
+                    $base_filename = 'attachment';
+                }
+
                 // Make filename unique on disk to prevent collision. Store this unique name.
                 $unique_filename_on_disk = $base_filename . "_" . bin2hex(random_bytes(8)) . ($file_extension ? "." . $file_extension : "");
                 $filepath_on_disk = STORAGE_PATH_ATTACHMENTS . DIRECTORY_SEPARATOR . $unique_filename_on_disk;

@@ -1,9 +1,29 @@
--- Users table (Kept as is)
+-- Persons table (New - for sender/recipient details beyond users table)
+CREATE TABLE persons (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255),
+    avatar_url VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Email Addresses table (New - linked to persons)
+CREATE TABLE email_addresses (
+    id SERIAL PRIMARY KEY,
+    person_id INTEGER NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
+    email_address VARCHAR(255) NOT NULL,
+    is_primary BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (person_id, email_address),
+    UNIQUE (email_address) -- Ensuring email addresses themselves are unique across the system
+);
+
+-- Users table (Now with person_id)
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(255) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    person_id INTEGER UNIQUE REFERENCES persons(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -56,29 +76,6 @@ CREATE TABLE email_statuses (
     status VARCHAR(255) NOT NULL, -- e.g., 'read', 'unread', 'archived', 'deleted'
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
-
--- Persons table (New - for sender/recipient details beyond users table)
-CREATE TABLE persons (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255),
-    -- primary_email_address VARCHAR(255) UNIQUE, -- Removed to allow multiple email addresses via email_addresses table
-    avatar_url VARCHAR(255),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Email Addresses table (New - linked to persons)
-CREATE TABLE email_addresses (
-    id SERIAL PRIMARY KEY,
-    person_id INTEGER NOT NULL REFERENCES persons(id) ON DELETE CASCADE,
-    email_address VARCHAR(255) NOT NULL,
-    is_primary BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (person_id, email_address),
-    UNIQUE (email_address) -- Ensuring email addresses themselves are unique across the system
-);
-
--- Add a way to link users to persons if a user is also a person
-ALTER TABLE users ADD COLUMN person_id INTEGER UNIQUE REFERENCES persons(id) ON DELETE SET NULL;
 
 -- Email Recipients table (New - links emails to their recipients)
 CREATE TABLE email_recipients (
