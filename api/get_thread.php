@@ -14,7 +14,11 @@ try {
         send_json_error('Valid thread_id is required.', 400);
     }
     $thread_id = trim($_GET['thread_id']);
-    // Further validation for thread_id format could be added here (e.g., UUID regex)
+
+    $user_id = isset($_GET['user_id']) ? filter_var($_GET['user_id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) : null;
+    if ($user_id === false || $user_id === null || $user_id <= 0) {
+        send_json_error('Invalid or missing user_id. User ID must be a positive integer.', 400);
+    }
 
     // 3. Database Interaction
     $pdo = null;
@@ -28,132 +32,96 @@ try {
         send_json_error($e->getMessage(), 500);
     }
 
-    // --- Fetch Thread Metadata and Participants ---
-    // 4. Placeholder for DB Query (Thread Details)
-    /*
-    Conceptual SQL for thread metadata:
-    SELECT id, subject FROM threads WHERE id = :thread_id;
+    // Fetch Thread Metadata (Subject)
+    $stmt_thread_meta = $pdo->prepare("SELECT subject FROM threads WHERE id = :thread_id");
+    $stmt_thread_meta->bindParam(':thread_id', $thread_id, PDO::PARAM_STR); // Assuming thread_id can be non-numeric
+    $stmt_thread_meta->execute();
+    $thread_info = $stmt_thread_meta->fetch(PDO::FETCH_ASSOC);
 
-    Conceptual SQL for thread participants:
-    SELECT p.id, p.name, p.profile_picture_url AS avatar_url
-    FROM persons p
-    JOIN thread_participants tp ON p.id = tp.person_id
-    WHERE tp.thread_id = :thread_id;
-    */
-    // $stmt_thread_meta = $pdo->prepare("SELECT id, subject FROM threads WHERE id = :thread_id");
-    // $stmt_thread_meta->execute(['thread_id' => $thread_id]);
-    // $thread_info = $stmt_thread_meta->fetch(PDO::FETCH_ASSOC);
-    //
-    // if (!$thread_info) {
-    //     send_json_error('Thread not found.', 404);
-    // }
-    //
-    // $stmt_participants = $pdo->prepare("SELECT p.id, p.name, p.profile_picture_url FROM persons p JOIN thread_participants tp ON p.id = tp.person_id WHERE tp.thread_id = :thread_id");
-    // $stmt_participants->execute(['thread_id' => $thread_id]);
-    // $participant_rows = $stmt_participants->fetchAll(PDO::FETCH_ASSOC);
-
-
-    // --- Fetch Emails in Thread with Senders and Attachments ---
-    // 5. Placeholder for DB Query (Emails in Thread)
-    /*
-    Conceptual SQL for emails (ordered chronologically ASC):
-    SELECT
-        e.id AS email_id, e.body_html, e.body_text, e.timestamp, e.is_read,
-        p.id AS sender_id, p.name AS sender_name, p.profile_picture_url AS sender_avatar_url,
-        a.id AS attachment_id, a.filename, a.filesize, a.mimetype, a.download_url
-    FROM emails e
-    JOIN persons p ON e.from_person_id = p.id
-    LEFT JOIN email_attachments ea ON e.id = ea.email_id
-    LEFT JOIN attachments a ON ea.attachment_id = a.id
-    WHERE e.thread_id = :thread_id
-    ORDER BY e.timestamp ASC;
-    */
-    // This query structure (joining emails with attachments) results in one row per attachment,
-    // meaning email details are duplicated if an email has multiple attachments.
-    // Data aggregation is needed in PHP to group attachments under their respective emails.
-
-    // $stmt_emails_attachments = $pdo->prepare("/* SQL_QUERY_FOR_EMAILS_AND_ATTACHMENTS */");
-    // $stmt_emails_attachments->execute(['thread_id' => $thread_id]);
-    // $email_data_rows = $stmt_emails_attachments->fetchAll(PDO::FETCH_ASSOC);
-
-    // Simulate "Not Found" for specific ID for testing purposes
-    if ($thread_id === "non_existent_thread_id") {
+    if (!$thread_info) {
         send_json_error('Thread not found.', 404);
     }
 
-    // 6. Data Processing (Placeholder)
-    // $participants_array = [];
-    // foreach ($participant_rows as $p_row) {
-    //     $participants_array[] = [
-    //         'id' => $p_row['id'],
-    //         'name' => $p_row['name'],
-    //         'avatar_url' => $p_row['profile_picture_url'] ?: '/avatars/default.png'
-    //     ];
-    // }
-    //
-    // $emails_map = []; // Helper to group attachments by email_id
-    // foreach ($email_data_rows as $row) {
-    //     $email_id = $row['email_id'];
-    //     if (!isset($emails_map[$email_id])) {
-    //         $emails_map[$email_id] = [
-    //             "id" => $email_id,
-    //             "sender" => [
-    //                 "id" => $row['sender_id'],
-    //                 "name" => $row['sender_name'],
-    //                 "avatar_url" => $row['sender_avatar_url'] ?: '/avatars/default.png'
-    //             ],
-    //             "body_html" => $row['body_html'],
-    //             "body_text" => $row['body_text'],
-    //             "timestamp" => date('Y-m-d H:i:s', strtotime($row['timestamp'])), // Format for consistency
-    //             "is_read" => (bool)$row['is_read'], // Ensure boolean
-    //             "attachments" => []
-    //         ];
-    //     }
-    //     if ($row['attachment_id']) { // If there's an attachment in this row
-    //         $emails_map[$email_id]['attachments'][] = [
-    //             "id" => $row['attachment_id'],
-    //             "filename" => $row['filename'],
-    //             "filesize" => (int)$row['filesize'], // Ensure integer
-    //             "mimetype" => $row['mimetype'],
-    //             "url" => $row['download_url'] // Or construct as needed, e.g., "/download.php?id=" . $row['attachment_id']
-    //         ];
-    //     }
-    // }
-    // $final_emails_list = array_values($emails_map); // Convert map to list
+    // Fetch Emails in Thread with Senders and Post Status
+    // Note: Attachments are not included in this version for simplicity, focusing on post_status.
+    // The original placeholder had attachment logic; this would need to be re-integrated carefully if required.
+    $sql_emails = "
+        SELECT
+            e.id AS email_id,
+            e.body_html,
+            e.body_text,
+            e.timestamp,
+            COALESCE(ps.status, 'unread') AS post_status, -- Get post status for the current user
+            p.id AS sender_id,
+            p.name AS sender_name,
+            p.profile_picture_url AS sender_avatar_url
+        FROM
+            emails e
+        JOIN
+            persons p ON e.from_person_id = p.id
+        LEFT JOIN
+            post_statuses ps ON e.id = ps.post_id AND ps.user_id = :current_user_id
+        WHERE
+            e.thread_id = :thread_id
+        ORDER BY
+            e.timestamp ASC;
+    ";
 
-    // Placeholder data for a successful response:
-    $response_data = [
-        "id" => $thread_id, // From $thread_info['id']
-        "subject" => "Subject for thread ID: " . $thread_id, // From $thread_info['subject']
-        "participants" => [ // From $participants_array
-            ["id" => "user_alpha_id", "name" => "User Alpha", "avatar_url" => "/avatars/alpha.png"],
-            ["id" => "user_beta_id", "name" => "User Beta", "avatar_url" => "/avatars/beta.png"]
-        ],
-        "emails" => [ // From $final_emails_list
-            [
-                "id" => "email_1_for_" . $thread_id,
-                "sender" => ["id" => "user_alpha_id", "name" => "User Alpha", "avatar_url" => "/avatars/alpha.png"],
-                "body_html" => "<p>Hello User Beta,</p><p>This is the first email in thread " . $thread_id . ".</p>",
-                "body_text" => "Hello User Beta,\nThis is the first email in thread " . $thread_id . ".",
-                "timestamp" => "2024-08-01 14:30:00",
-                "is_read" => true,
-                "attachments" => [
-                    ["id" => "attach_x1", "filename" => "brief.pdf", "filesize" => 123456, "mimetype" => "application/pdf", "url" => "/download/attach_x1"]
-                ]
+    $stmt_emails = $pdo->prepare($sql_emails);
+    $stmt_emails->bindParam(':thread_id', $thread_id, PDO::PARAM_STR);
+    $stmt_emails->bindParam(':current_user_id', $user_id, PDO::PARAM_INT);
+    $stmt_emails->execute();
+    $email_rows = $stmt_emails->fetchAll(PDO::FETCH_ASSOC);
+
+    // Process emails
+    $emails_array = [];
+    $participant_ids = []; // To gather unique participant IDs from emails
+
+    foreach ($email_rows as $row) {
+        $emails_array[] = [
+            "id" => $row['email_id'],
+            "sender" => [
+                "id" => $row['sender_id'],
+                "name" => $row['sender_name'],
+                "avatar_url" => $row['sender_avatar_url'] ?: '/avatars/default.png'
             ],
-            [
-                "id" => "email_2_for_" . $thread_id,
-                "sender" => ["id" => "user_beta_id", "name" => "User Beta", "avatar_url" => "/avatars/beta.png"],
-                "body_html" => "<p>Hi Alpha,</p><p>Thanks for the brief!</p>",
-                "body_text" => "Hi Alpha,\nThanks for the brief!",
-                "timestamp" => "2024-08-01 14:45:00",
-                "is_read" => false,
-                "attachments" => []
-            ]
-        ]
+            "body_html" => $row['body_html'],
+            "body_text" => $row['body_text'],
+            "timestamp" => $row['timestamp'], // Consider formatting if needed
+            "status" => $row['post_status'], // Added post status
+            "attachments" => [] // Placeholder, as attachments are not fetched in this version
+        ];
+        if (!in_array($row['sender_id'], $participant_ids)) {
+            $participant_ids[] = $row['sender_id'];
+        }
+    }
+
+    // Fetch participant details (simplified: uses only senders from the emails in the thread)
+    // A more robust participant list might come from a dedicated `thread_participants` table if it existed.
+    $participants_array = [];
+    if (!empty($participant_ids)) {
+        $placeholders = implode(',', array_fill(0, count($participant_ids), '?'));
+        $stmt_participants = $pdo->prepare("SELECT id, name, profile_picture_url FROM persons WHERE id IN ($placeholders)");
+        $stmt_participants->execute($participant_ids);
+        $participant_rows = $stmt_participants->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($participant_rows as $p_row) {
+            $participants_array[] = [
+                'id' => $p_row['id'],
+                'name' => $p_row['name'],
+                'avatar_url' => $p_row['profile_picture_url'] ?: '/avatars/default.png'
+            ];
+        }
+    }
+
+
+    // 6. Data Processing and Response
+    $response_data = [
+        "id" => $thread_id,
+        "subject" => $thread_info['subject'],
+        "participants" => $participants_array,
+        "emails" => $emails_array
     ];
 
-    // 7. Success Response
     send_json_success($response_data);
 
 } catch (PDOException $e) {
@@ -163,57 +131,5 @@ try {
     error_log("General Exception in get_thread.php: " . $e->getMessage());
     send_json_error('An unexpected error occurred. Please try again.', 500);
 }
-
-/*
-// 8. Example of expected JSON output structure
-
-// SUCCESS:
-// {
-//   "status": "success",
-//   "data": {
-//     "id": "thread_uuid_xyz",
-//     "subject": "Important Update & Next Steps",
-//     "participants": [
-//       { "id": "person_uuid_123", "name": "Alice Wonderland", "avatar_url": "/avatars/alice.png" },
-//       { "id": "person_uuid_456", "name": "Bob The Builder", "avatar_url": "/avatars/bob.png" }
-//     ],
-//     "emails": [
-//       {
-//         "id": "email_uuid_abc",
-//         "sender": { "id": "person_uuid_123", "name": "Alice Wonderland", "avatar_url": "/avatars/alice.png" },
-//         "body_html": "<p>Hello Bob, see attached.</p>",
-//         "body_text": "Hello Bob, see attached.",
-//         "timestamp": "2024-07-30 09:00:00",
-//         "is_read": true,
-//         "attachments": [
-//           { "id": "attach_uuid_1", "filename": "document.pdf", "filesize": 102400, "mimetype": "application/pdf", "url": "/download.php?id=attach_uuid_1" }
-//         ]
-//       },
-//       {
-//         "id": "email_uuid_def",
-//         "sender": { "id": "person_uuid_456", "name": "Bob The Builder", "avatar_url": "/avatars/bob.png" },
-//         "body_html": "<p>Thanks Alice, looks good!</p>",
-//         "body_text": "Thanks Alice, looks good!",
-//         "timestamp": "2024-07-30 09:15:00",
-//         "is_read": false,
-//         "attachments": []
-//       }
-//       // ... more emails in chronological order ...
-//     ]
-//   }
-// }
-
-// ERROR (Not Found):
-// {
-//   "status": "error",
-//   "message": "Thread not found."
-// }
-
-// ERROR (Bad Request):
-// {
-//   "status": "error",
-//   "message": "Valid thread_id is required."
-// }
-*/
 
 ?>

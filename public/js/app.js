@@ -17,16 +17,17 @@ const groupsListContainer = document.getElementById('groups-list-container');
 const newGroupNameInput = document.getElementById('new-group-name');
 const createGroupBtn = document.getElementById('create-group-btn');
 const groupFeedFilterSelect = document.getElementById('group-feed-filter');
+const statusFeedFilterSelect = document.getElementById('status-feed-filter'); // Added status filter
 const globalLoader = document.getElementById('global-loader'); // Added global loader
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Added toggleGroupsSidebarBtn to critical elements
+    // Added toggleGroupsSidebarBtn and statusFeedFilterSelect to critical elements
     // Removed profile modal elements from criticalElements
     const criticalElements = [
         feedContainer, newEmailBtn, composeModal, composeForm, closeComposeModalBtn, cancelComposeBtn,
-        // profileModal, closeProfileModalBtn, profileName, profileEmails, profileNotes, profileThreadsContainer, // Removed
-        groupsSidebar, toggleGroupsSidebarBtn, groupsListContainer, newGroupNameInput, createGroupBtn, groupFeedFilterSelect,
+        groupsSidebar, toggleGroupsSidebarBtn, groupsListContainer, newGroupNameInput, createGroupBtn,
+        groupFeedFilterSelect, statusFeedFilterSelect, // Added statusFeedFilterSelect
         globalLoader
     ];
 
@@ -36,8 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!el) {
                 const elementName = [
                     'feedContainer', 'newEmailBtn', 'composeModal', 'composeForm', 'closeComposeModalBtn', 'cancelComposeBtn',
-                    // 'profileModal', 'closeProfileModalBtn', 'profileName', 'profileEmails', 'profileNotes', 'profileThreadsContainer', // Removed
-                    'groupsSidebar', 'toggleGroupsSidebarBtn', 'groupsListContainer', 'newGroupNameInput', 'createGroupBtn', 'groupFeedFilterSelect',
+                    'groupsSidebar', 'toggleGroupsSidebarBtn', 'groupsListContainer', 'newGroupNameInput', 'createGroupBtn',
+                    'groupFeedFilterSelect', 'statusFeedFilterSelect', // Added statusFeedFilterSelect
                     'globalLoader'
                 ][index];
                 console.error(`${elementName} (at index ${index}) is missing from the DOM.`);
@@ -137,10 +138,11 @@ function initializeEventListeners() {
         }
     });
 
-    // Event delegation for reply buttons
+    // Event delegation for reply buttons and status changes
     feedContainer.addEventListener('click', (event) => {
-        if (event.target.classList.contains('reply-to-email-btn')) {
-            const button = event.target;
+        const target = event.target;
+        if (target.classList.contains('reply-to-email-btn')) {
+            const button = target;
             const emailId = button.dataset.emailId;
             const originalSubject = button.dataset.subject;
             const originalSender = button.dataset.sender; // This is the person who sent the email you're replying to
@@ -191,10 +193,60 @@ function initializeEventListeners() {
             if (personId) {
                 showProfile(personId);
             } else {
-                console.warn('Sender link clicked, but no person-id found.', event.target);
+                console.warn('Sender link clicked, but no person-id found.', target);
+            }
+        }
+        // Note: Status change is handled by a 'change' event listener below, not 'click'.
+    });
+
+    // Event delegation for post status changes
+    feedContainer.addEventListener('change', async (event) => {
+        const target = event.target;
+        if (target.classList.contains('post-status-select')) {
+            const emailId = target.dataset.emailId;
+            const newStatus = target.value;
+            const currentUserId = 1; // Placeholder user ID
+
+            if (!emailId || !newStatus) {
+                console.error('Email ID or new status is missing for status change.');
+                return;
+            }
+
+            try {
+                showGlobalLoader();
+                await api.setPostStatus(emailId, currentUserId, newStatus); // Using api.setPostStatus
+                // Update UI: Change the text of the current status span
+                const statusContainer = target.closest('.email-status-container');
+                if (statusContainer) {
+                    const currentStatusSpan = statusContainer.querySelector('.current-post-status');
+                    if (currentStatusSpan) {
+                        currentStatusSpan.textContent = `Status: ${newStatus}`;
+                    }
+                }
+                // Optionally, reload the feed to ensure all data is consistent,
+                // though immediate UI update is better UX for this specific change.
+                // For simplicity as requested, a reload:
+                // await loadFeed({ /* any existing filters */ });
+                // However, let's try to update locally first and avoid full reload if not necessary.
+                // If other aspects of the email could change based on status, a reload is safer.
+                // The prompt suggested "a feed reload might be simplest" for now.
+                console.log(`Status for email ${emailId} changed to ${newStatus}. Reloading feed.`);
+                await loadFeed(); // Reload feed with current filters (if any stored globally)
+                                  // Or pass currently active group filter if available:
+                                  // const selectedGroupId = groupFeedFilterSelect.value;
+                                  // await loadFeed({ groupId: selectedGroupId || null });
+
+            } catch (error) {
+                console.error(`Failed to update status for email ${emailId}:`, error);
+                alert(`Failed to update status: ${error.message}`);
+                // Optionally, revert the select element to its previous value if the API call fails
+                // This would require storing the previous value before making the call.
+            } finally {
+                hideGlobalLoader();
             }
         }
     });
+
 
     // Removed profile modal event listeners
 
@@ -227,7 +279,22 @@ function initializeEventListeners() {
     if (groupFeedFilterSelect) {
         groupFeedFilterSelect.addEventListener('change', () => {
             const selectedGroupId = groupFeedFilterSelect.value;
-            loadFeed({ groupId: selectedGroupId || null }); // Pass null or empty to load all
+            const selectedStatus = statusFeedFilterSelect ? statusFeedFilterSelect.value : null;
+            const params = {};
+            if (selectedGroupId) params.groupId = selectedGroupId;
+            if (selectedStatus) params.status = selectedStatus;
+            loadFeed(params);
+        });
+    }
+
+    if (statusFeedFilterSelect) { // Added event listener for status filter
+        statusFeedFilterSelect.addEventListener('change', () => {
+            const selectedStatus = statusFeedFilterSelect.value;
+            const selectedGroupId = groupFeedFilterSelect ? groupFeedFilterSelect.value : null;
+            const params = {};
+            if (selectedGroupId) params.groupId = selectedGroupId;
+            if (selectedStatus) params.status = selectedStatus;
+            loadFeed(params);
         });
     }
 
@@ -320,18 +387,43 @@ async function loadFeed(params = {}) {
     showGlobalLoader(); // Show global loader
     feedContainer.innerHTML = '<p>Loading feed...</p>'; // Specific loader for feed area
 
+    // Define a placeholder userId. In a real app, this would come from authentication.
+    const currentUserId = 1;
+
     try {
-        const response = await getFeed(params); // getFeed is in api.js
-        const threads = response.threads;
+        // Ensure params is an object.
+        const effectiveParams = { ...params };
+
+        // Get selected group and status for the API call
+        const selectedGroupId = groupFeedFilterSelect ? groupFeedFilterSelect.value : null;
+        const selectedStatus = statusFeedFilterSelect ? statusFeedFilterSelect.value : null;
+
+        if (selectedGroupId) {
+            effectiveParams.groupId = selectedGroupId;
+        }
+        if (selectedStatus) {
+            effectiveParams.status = selectedStatus;
+        }
+
+        // getFeed now expects userId as the first argument.
+        const response = await api.getFeed(currentUserId, effectiveParams); // Using api.getFeed
+        const threads = response.data ? response.data.threads : response.threads; // Adjust based on actual API response structure from get_feed.php
 
         if (!threads || threads.length === 0) {
-            const filterMessage = params.groupId ? ` for group ID ${params.groupId}` : '';
+            let filterMessage = '';
+            if (effectiveParams.groupId && effectiveParams.status) {
+                filterMessage = ` for group ID ${effectiveParams.groupId} and status '${effectiveParams.status}'`;
+            } else if (effectiveParams.groupId) {
+                filterMessage = ` for group ID ${effectiveParams.groupId}`;
+            } else if (effectiveParams.status) {
+                filterMessage = ` for status '${effectiveParams.status}'`;
+            }
             feedContainer.innerHTML = `<p>No threads to display${filterMessage}.</p>`;
         } else {
             feedContainer.innerHTML = ''; // Clear "Loading feed..." message
             threads.forEach(thread => {
-                // Ensure renderThread is called from window scope or is otherwise available
-                const threadElement = window.renderThread(thread, thread.subject);
+                // Pass currentUserId to renderThread
+                const threadElement = window.renderThread(thread, thread.subject, currentUserId);
                 feedContainer.appendChild(threadElement);
             });
         }
@@ -386,10 +478,10 @@ async function loadGroups() {
             const option = document.createElement('option');
             option.value = group.group_id;
             option.textContent = group.name;
-                groupFeedFilterSelect.appendChild(option);
+            groupFeedFilterSelect.appendChild(option);
             });
         }
-    } catch (error)
+    } catch (error) { // Fixed missing opening curly brace for catch
         console.error('Error loading groups:', error);
         groupsListContainer.innerHTML = `<p>Error loading groups: ${error.message}</p>`;
     } finally {
