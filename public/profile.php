@@ -60,12 +60,8 @@ $page_title = "User Profile"; // Default title
             </div>
 
             <div id="profile-threads-container">
-                <h2>Associated Threads</h2>
-                <p>List of threads will appear here. (Placeholder)</p>
-                <ul>
-                    <li>Thread Subject 1 (Placeholder)</li>
-                    <li>Thread Subject 2 (Placeholder)</li>
-                </ul>
+                <!-- Content will be dynamically injected by profile.js -->
+                <p>Loading correspondence...</p>
             </div>
         <?php else: ?>
             <h1>Profile Not Found</h1>

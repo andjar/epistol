@@ -61,23 +61,64 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (profileThreadsContainer) {
-            profileThreadsContainer.innerHTML = '<h2>Associated Threads</h2>';
+            profileThreadsContainer.innerHTML = '<h2>Correspondence</h2>'; // Changed title
+
             if (profileData.threads && profileData.threads.length > 0) {
                 profileData.threads.forEach(thread => {
-                    // Assuming window.renderThread is available from api.js
-                    if (typeof window.renderThread === 'function') {
-                        const threadElement = window.renderThread(thread, thread.subject);
-                        profileThreadsContainer.appendChild(threadElement);
+                    const threadItem = document.createElement('div');
+                    threadItem.className = 'thread-item mb-4 p-3 border rounded shadow-sm';
+
+                    const threadSubject = document.createElement('h3');
+                    threadSubject.className = 'text-xl font-semibold mb-2';
+                    threadSubject.textContent = thread.subject || 'No Subject';
+                    threadItem.appendChild(threadSubject);
+
+                    if (thread.emails && thread.emails.length > 0) {
+                        thread.emails.forEach(email => {
+                            const emailItem = document.createElement('div');
+                            emailItem.className = 'email-item mb-3 p-2 border-t';
+                            if (email.parent_email_id) {
+                                emailItem.classList.add('ml-4'); // Indent replies
+                            }
+
+                            let emailInfo = `<p class="text-sm text-gray-600"><strong>Date:</strong> ${new Date(email.created_at).toLocaleString()}</p>`;
+                            emailInfo += `<p class="text-sm"><strong>From:</strong> ${email.sender.name} (${email.sender.email})</p>`;
+
+                            const toRecipients = email.recipients.filter(r => r.type === 'to');
+                            const ccRecipients = email.recipients.filter(r => r.type === 'cc');
+                            const bccRecipients = email.recipients.filter(r => r.type === 'bcc');
+
+                            if (toRecipients.length > 0) {
+                                emailInfo += `<p class="text-sm"><strong>To:</strong> ${toRecipients.map(r => `${r.name} (${r.email})`).join(', ')}</p>`;
+                            }
+                            if (ccRecipients.length > 0) {
+                                emailInfo += `<p class="text-sm"><strong>Cc:</strong> ${ccRecipients.map(r => `${r.name} (${r.email})`).join(', ')}</p>`;
+                            }
+                            if (bccRecipients.length > 0) { // Displaying BCC for completeness, though typically hidden
+                                emailInfo += `<p class="text-sm"><strong>Bcc:</strong> ${bccRecipients.map(r => `${r.name} (${r.email})`).join(', ')}</p>`;
+                            }
+
+                            emailInfo += `<p class="text-sm"><strong>Subject:</strong> ${email.subject || '(No Subject)'}</p>`;
+
+                            const bodySnippet = document.createElement('p');
+                            bodySnippet.className = 'email-body-snippet text-sm mt-1 italic';
+                            // Create a snippet: first 100 chars of body_text or full if shorter
+                            bodySnippet.textContent = email.body_text ? (email.body_text.substring(0, 150) + (email.body_text.length > 150 ? '...' : '')) : '(No body text)';
+
+                            emailItem.innerHTML = emailInfo;
+                            emailItem.appendChild(bodySnippet);
+                            threadItem.appendChild(emailItem);
+                        });
                     } else {
-                        // Fallback if renderThread is not available
-                        const p = document.createElement('p');
-                        p.textContent = `Thread: ${thread.subject || 'No Subject'}`;
-                        profileThreadsContainer.appendChild(p);
-                        console.warn('window.renderThread function not found. Displaying basic thread info.');
+                        const noEmailsMessage = document.createElement('p');
+                        noEmailsMessage.textContent = 'No emails in this thread.';
+                        noEmailsMessage.className = 'text-sm text-gray-500';
+                        threadItem.appendChild(noEmailsMessage);
                     }
+                    profileThreadsContainer.appendChild(threadItem);
                 });
             } else {
-                profileThreadsContainer.innerHTML += '<p>No associated threads found.</p>';
+                profileThreadsContainer.innerHTML += '<p>No correspondence found for this person.</p>';
             }
         }
 
