@@ -805,3 +805,119 @@ select#status-feed-filter:focus, select#group-feed-filter:focus {
     background-color: var(--main-content-bg); /* White on focus for clarity */
     color: var(--text-color-primary);
 }
+
+/* Profile Page Correspondence Styles */
+#profile-threads-container {
+    margin-top: 20px;
+}
+
+#profile-threads-container > h2 { /* Style for the "Correspondence" title set by JS */
+    font-size: 1.5em;
+    color: var(--text-color-primary);
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--card-border-color);
+}
+
+.thread-item {
+    background-color: #f9f9f9; /* Slightly off-white from card-bg for visual distinction */
+    border: 1px solid var(--card-border-color);
+    border-radius: var(--border-radius-md); /* Consistent with other cards */
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+}
+
+.thread-item h3 { /* Thread subject title */
+    margin-top: 0;
+    margin-bottom: 15px; /* Increased space before the first email */
+    font-size: 1.25em; /* Slightly smaller than main page titles */
+    color: var(--link-color); /* Use link color for thread subjects */
+}
+
+.thread-item > p { /* For "No emails in this thread" message */
+    font-style: italic;
+    color: var(--text-color-secondary);
+    padding: 10px 0;
+}
+
+.email-item {
+    background-color: var(--card-bg); /* White background for emails */
+    border: 1px solid #e0e0e0; /* Slightly lighter border than thread-item */
+    border-radius: var(--border-radius-sm); /* Smaller radius for nested items */
+    padding: 12px;
+    margin-top: 10px;
+}
+.email-item:first-of-type {
+    margin-top: 0; /* No top margin for the first email in a thread */
+}
+
+.email-item p {
+    margin: 6px 0; /* Adjusted spacing for email details */
+    font-size: 0.9em; /* Slightly smaller than base, good for dense info */
+    line-height: 1.5;
+    color: var(--text-color-secondary); /* Default to secondary for meta text */
+}
+.email-item p strong { /* Labels like "From:", "To:" */
+    font-weight: 600;
+    color: var(--text-color-primary); /* Darker for labels */
+}
+
+/* Specific styling for parts of the email item */
+.email-item .email-meta span { /* This was in the example, but JS uses <p> for date */
+    display: block;
+    font-size: 0.85em;
+    color: var(--text-color-tertiary); /* Lighter for less critical meta */
+    margin-bottom: 8px;
+}
+
+.email-item p.text-sm.text-gray-600 { /* Targeting date paragraph from JS */
+    font-size: 0.85em;
+    color: var(--text-color-tertiary);
+    margin-bottom: 8px;
+}
+.email-item p.text-sm { /* Targeting From, To, Cc, Subject paragraphs */
+    color: var(--text-color-secondary);
+}
+.email-item p.text-sm strong { /* Ensure strong tags within these are darker */
+    color: var(--text-color-primary);
+}
+
+
+.email-body-snippet {
+    font-style: italic;
+    color: #555555; /* Darker than secondary for readability */
+    margin-top: 10px;
+    padding: 8px; /* Add some padding */
+    background-color: #fdfdfd; /* Very light background for snippet */
+    border-left: 3px solid var(--link-color); /* Accent for the snippet */
+    border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
+}
+
+/* Fallback message style for #profile-threads-container */
+#profile-threads-container > p {
+    font-style: italic;
+    color: var(--text-color-secondary);
+    text-align: center;
+    padding: 25px;
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-md);
+    border: 1px dashed var(--card-border-color);
+}
+
+/* Indentation for replies if the 'ml-4' class is used by JS */
+.email-item.ml-4 {
+    margin-left: 20px; /* Adjust as needed, 1rem = 16px, 1.5rem = 24px */
+    border-left: 3px solid var(--post-separator-color); /* Visual cue for reply */
+    padding-left: 10px;
+}
+
+/* Ensure class-based styling from JS takes precedence if needed, or integrate them here */
+/* .mb-4, .p-3, .border, .rounded, .shadow-sm etc. are utility classes presumably from a framework.
+   The styles above try to achieve a similar look thematically.
+   If those classes are defined and active, they will also apply.
+   For example, .thread-item has .mb-4, .p-3, .border, .rounded, .shadow-sm.
+   The CSS above for .thread-item also defines padding, border, border-radius, margin-bottom, background-color.
+   This can lead to some overlap, but generally, more specific selectors or later-defined rules win.
+   The provided CSS aims to be self-contained for the correspondence block.
+*/

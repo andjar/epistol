@@ -104,9 +104,114 @@ try {
                 'is_primary' => (bool)$email['is_primary']
             ];
         }, $email_addresses),
-        'threads' => [] // Placeholder for associated threads
+        // 'threads' => [] // Placeholder for associated threads
                          // TODO: Implement fetching associated threads
     ];
+
+    // Fetch associated thread IDs
+    $stmt_thread_ids = $pdo->prepare(
+        "SELECT DISTINCT t.id AS thread_id
+         FROM threads t
+         LEFT JOIN emails e ON t.id = e.thread_id
+         LEFT JOIN users u ON e.user_id = u.id
+         LEFT JOIN email_recipients er ON e.id = er.email_id
+         WHERE u.person_id = :person_id OR er.person_id = :person_id"
+    );
+    $stmt_thread_ids->bindParam(':person_id', $person_id);
+    $stmt_thread_ids->execute();
+    $thread_ids = $stmt_thread_ids->fetchAll(PDO::FETCH_COLUMN);
+
+    $threads_data = [];
+    if (!empty($thread_ids)) {
+        // Prepare statements outside the loop for efficiency
+        $stmt_thread_details = $pdo->prepare(
+            "SELECT id, subject, created_at, last_activity_at FROM threads WHERE id = :current_thread_id"
+        );
+
+        $stmt_emails_in_thread = $pdo->prepare(
+            "SELECT
+                e.id AS email_id,
+                e.parent_email_id,
+                e.subject AS email_subject,
+                e.body_text,
+                e.body_html,
+                e.created_at AS email_created_at,
+                s_p.name AS sender_name,
+                s_ea.email_address AS sender_email
+            FROM emails e
+            JOIN users s_u ON e.user_id = s_u.id
+            JOIN persons s_p ON s_u.person_id = s_p.person_id
+            JOIN email_addresses s_ea ON s_p.person_id = s_ea.person_id AND s_ea.is_primary = 1
+            WHERE e.thread_id = :current_thread_id
+            ORDER BY e.created_at ASC"
+        );
+
+        $stmt_recipients_for_email = $pdo->prepare(
+            "SELECT
+                r_p.name AS recipient_name,
+                r_ea.email_address AS recipient_email,
+                er.type AS recipient_type
+            FROM email_recipients er
+            JOIN email_addresses r_ea ON er.email_address_id = r_ea.id
+            JOIN persons r_p ON r_ea.person_id = r_p.person_id
+            WHERE er.email_id = :current_email_id"
+        );
+
+        foreach ($thread_ids as $current_thread_id) {
+            // Fetch thread details
+            $stmt_thread_details->bindParam(':current_thread_id', $current_thread_id);
+            $stmt_thread_details->execute();
+            $thread_detail = $stmt_thread_details->fetch(PDO::FETCH_ASSOC);
+
+            if ($thread_detail) {
+                $current_thread_data = [
+                    'id' => $thread_detail['id'],
+                    'subject' => $thread_detail['subject'],
+                    'created_at' => $thread_detail['created_at'],
+                    'last_activity_at' => $thread_detail['last_activity_at'],
+                    'emails' => []
+                ];
+
+                // Fetch emails for the current thread
+                $stmt_emails_in_thread->bindParam(':current_thread_id', $current_thread_id);
+                $stmt_emails_in_thread->execute();
+                $emails_in_thread = $stmt_emails_in_thread->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($emails_in_thread as $email_data) {
+                    $current_email_id = $email_data['email_id'];
+                    $email_output = [
+                        'id' => $current_email_id,
+                        'parent_email_id' => $email_data['parent_email_id'],
+                        'subject' => $email_data['email_subject'],
+                        'body_text' => $email_data['body_text'],
+                        'body_html' => $email_data['body_html'],
+                        'created_at' => $email_data['email_created_at'],
+                        'sender' => [
+                            'name' => $email_data['sender_name'],
+                            'email' => $email_data['sender_email']
+                        ],
+                        'recipients' => []
+                    ];
+
+                    // Fetch recipients for the current email
+                    $stmt_recipients_for_email->bindParam(':current_email_id', $current_email_id);
+                    $stmt_recipients_for_email->execute();
+                    $recipients = $stmt_recipients_for_email->fetchAll(PDO::FETCH_ASSOC);
+
+                    foreach ($recipients as $recipient) {
+                        $email_output['recipients'][] = [
+                            'name' => $recipient['recipient_name'],
+                            'email' => $recipient['recipient_email'],
+                            'type' => $recipient['recipient_type']
+                        ];
+                    }
+                    $current_thread_data['emails'][] = $email_output;
+                }
+                $threads_data[] = $current_thread_data;
+            }
+        }
+    }
+    $profile_output['threads'] = $threads_data;
 
     send_json_success($profile_output);
 
