@@ -148,10 +148,31 @@ try {
 
     $stmt_attachments = $pdo->prepare("SELECT id, filename, mimetype, filesize_bytes FROM attachments WHERE email_id = :email_id ORDER BY filename ASC");
 
+    // NOTE ON "THREADING" (CONCURRENCY):
+    // This script executes synchronously as part of a typical PHP web request-response cycle.
+    // True multi-threading (e.g., using pthreads) is generally not suitable for this model
+    // due to PHP's shared-nothing architecture in most web SAPIs and the added complexity.
+    // Performance improvements in such scripts usually come from:
+    // 1. Database query optimization (e.g., efficient joins, indexing).
+    // 2. Caching frequently accessed data.
+    // 3. Offloading heavy tasks (e.g., email sending, complex processing) to background workers/queues,
+    //    which are separate processes, not threads within this script.
+    //
+    // The loop below fetches attachments for each email. If fetching attachments involved
+    // slow, independent I/O operations (e.g., calling external services for each one),
+    // an asynchronous pattern (e.g., using ReactPHP, Amp, or GuzzleHttp promises if it were HTTP calls)
+    // might be considered to run these I/O operations concurrently.
+    // However, in this case, fetching attachments is a quick database query per email.
+    // The N+1 query pattern for attachments (one query per email) is a potential performance
+    // concern if there are many emails with attachments. This could be optimized by fetching all
+    // attachments for all emails in the thread in a single query and then mapping them in PHP.
+
     foreach ($email_rows as $row) {
         $email_id_int = (int)$row['email_id'];
 
-        // Fetch attachments for this email
+        // Fetch attachments for this email. This is an N+1 query pattern.
+        // For high-performance scenarios with many emails, consider fetching all attachments
+        // for the thread in one go and then distributing them to their respective emails in PHP.
         $stmt_attachments->bindParam(':email_id', $email_id_int, PDO::PARAM_INT);
         $stmt_attachments->execute();
         $attachment_rows = $stmt_attachments->fetchAll(PDO::FETCH_ASSOC);
