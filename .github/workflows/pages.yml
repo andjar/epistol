@@ -53,6 +53,19 @@ jobs:
           title: ${{ github.event.repository.name }}
           description: ${{ github.event.repository.description }}
           
+          # Repository information
+          repository: ${{ github.repository }}
+          github:
+            repository_nwo: ${{ github.repository }}
+            repository_name: ${{ github.event.repository.name }}
+            repository_url: ${{ github.event.repository.html_url }}
+            owner_name: ${{ github.repository_owner }}
+            owner_url: https://github.com/${{ github.repository_owner }}
+            zip_url: ${{ github.event.repository.html_url }}/archive/refs/heads/main.zip
+            tar_url: ${{ github.event.repository.html_url }}/archive/refs/heads/main.tar.gz
+            is_project_page: true
+            is_user_page: false
+          
           # Custom variables
           github_username: ${{ github.repository_owner }}
           github_repo: ${{ github.event.repository.name }}
@@ -363,6 +376,7 @@ jobs:
           gem "github-pages", group: :jekyll_plugins
           gem "jekyll-remote-theme"
           gem "jekyll-relative-links"
+          gem "webrick", "~> 1.7"
           EOF
 
       - name: Build with Jekyll
@@ -371,6 +385,8 @@ jobs:
           bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}"
         env:
           JEKYLL_ENV: production
+          PAGES_REPO_NWO: ${{ github.repository }}
+          JEKYLL_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
