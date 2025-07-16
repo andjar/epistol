@@ -118,20 +118,102 @@ img {
     color: var(--text-color-secondary);
 }
 
-#new-email-btn { /* This button can remain somewhat prominent for a key action */
-    background-color: var(--action-button-color);
+.nav-menu {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: 10px;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: var(--text-color-secondary);
+    border-radius: var(--border-radius-sm);
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.nav-link:hover {
+    background-color: var(--action-button-hover-bg);
+    color: var(--text-color-primary);
+}
+
+.nav-link svg {
+    flex-shrink: 0;
+}
+
+.nav-link span {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .nav-link span {
+        display: inline;
+    }
+}
+
+.search-area {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.search-btn {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--text-color-secondary);
+    border-radius: var(--border-radius-sm);
+    transition: all 0.2s ease;
+}
+
+.search-btn:hover {
+    background-color: var(--action-button-hover-bg);
+    color: var(--text-color-primary);
+}
+
+.new-email-btn {
+    background-color: var(--link-color);
     color: white;
-    padding: 0.5rem 1rem;
+    padding: 8px 16px;
     border: none;
     border-radius: var(--border-radius-sm);
     cursor: pointer;
-    font-size: 0.9em;
+    font-size: 14px;
     font-weight: 500;
-    transition: background-color 0.2s ease-in-out;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
-#new-email-btn:hover {
-    background-color: var(--action-button-hover-bg);
+
+.new-email-btn:hover {
+    background-color: var(--link-color-hover);
 }
+
+.new-email-btn svg {
+    flex-shrink: 0;
+}
+
+.new-email-btn span {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .new-email-btn span {
+        display: inline;
+    }
+}
+
+
 
 /* === Layout: Main Container === */
 .main-container {
@@ -450,24 +532,167 @@ img {
 
 
 /* Unread email post indication */
+.post-card.email-unread {
+    background-color: #f8f9ff;
+    border-left: 3px solid var(--link-color);
+    padding-left: 13px;
+}
+
 .post-card.email-unread .post-author-line .author-name,
 .post-card.email-unread .post-content-subject {
-    /* font-weight: 700; /* Bolder for unread */
-    /* color: var(--link-color); Could make unread prominent with link color */
+    font-weight: 700;
+    color: var(--text-color-primary);
 }
-.post-card.email-unread {
-    /* Add a subtle left border or slightly different background for unread posts */
-     /* border-left: 3px solid var(--link-color);
-     padding-left: 13px; /* Adjust if using border-left */
+
+.post-card.email-important {
+    background-color: #fff8f0;
+    border-left: 3px solid #ff9500;
+    padding-left: 13px;
 }
-/* You might want a visual indicator like a blue dot for unread */
-.post-card.email-unread .post-author-meta::before {
-    /* content: '●';
-    color: var(--link-color);
-    font-size: 10px;
+
+.post-card.email-important .post-author-line .author-name {
+    color: #ff9500;
+}
+
+.post-card.email-follow-up {
+    background-color: #f0f8ff;
+    border-left: 3px solid #00b4d8;
+    padding-left: 13px;
+}
+
+.post-card.email-follow-up .post-author-line .author-name {
+    color: #00b4d8;
+}
+
+/* Visual indicators for mail status */
+.mail-status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
     margin-right: 6px;
-    position: absolute;
-    left: 2px; top: 16px; /* Adjust positioning */
+    position: relative;
+    top: -1px;
+}
+
+.mail-status-indicator.unread {
+    background-color: var(--link-color);
+}
+
+.mail-status-indicator.important {
+    background-color: #ff9500;
+}
+
+.mail-status-indicator.follow-up {
+    background-color: #00b4d8;
+}
+
+.mail-status-indicator.read {
+    background-color: transparent;
+    border: 1px solid var(--text-color-tertiary);
+}
+
+/* Thread collapse/expand functionality */
+.thread-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: var(--card-bg);
+    border-bottom: 1px solid var(--post-separator-color);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.thread-header:hover {
+    background-color: var(--action-button-hover-bg);
+}
+
+.thread-toggle {
+    background: none;
+    border: none;
+    color: var(--text-color-secondary);
+    font-size: 16px;
+    margin-right: 8px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.thread-toggle.expanded {
+    transform: rotate(90deg);
+}
+
+.thread-info {
+    flex-grow: 1;
+}
+
+.thread-subject {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-color-primary);
+    margin-bottom: 4px;
+}
+
+.thread-meta {
+    font-size: 13px;
+    color: var(--text-color-secondary);
+    display: flex;
+    gap: 8px;
+}
+
+.thread-participants {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.participant-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: var(--text-color-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: white;
+    font-weight: 500;
+}
+
+.participant-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.thread-posts {
+    transition: all 0.3s ease;
+}
+
+.thread-posts.collapsed {
+    display: none;
+}
+
+/* Thread actions */
+.thread-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.thread-unread-count {
+    background-color: var(--link-color);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 16px;
+    text-align: center;
+}
+
+.thread-unread-count.zero {
+    display: none;
 }
 
 

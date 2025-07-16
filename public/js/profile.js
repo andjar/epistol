@@ -4,6 +4,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const profileNotesContainer = document.getElementById('profile-notes-container');
     const feedContainer = document.getElementById('feed-container');
     const pageContainer = document.querySelector('.main-container'); // To display general errors
+    const timelineContainer = document.getElementById('timeline-container');
+    const timelineHandle = document.getElementById('timeline-handle');
+    const timelineBar = document.getElementById('timeline-bar');
 
     if (!pageContainer) {
         console.error("Error: page-container element not found.");
@@ -25,6 +28,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (profilePageName) profilePageName.style.display = 'none'; // Hide loading message
         return;
     }
+
+    // Global variables for timeline
+    let allThreads = [];
+    let timelineRange = { start: null, end: null };
+    let currentTimelinePosition = 0.5; // 0 = oldest, 1 = newest
 
     try {
         // Assuming getProfile is globally available from api.js
@@ -60,7 +68,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             profileNotesContainer.innerHTML += `<p>${profileData.notes || 'No notes available for this profile.'}</p>`;
         }
 
-        loadFeed(personId);
+        await loadFeed(personId);
+        initializeTimeline();
 
     } catch (error) {
         console.error('Error fetching or displaying profile data:', error);
@@ -69,32 +78,132 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (profilePageName) profilePageName.style.display = 'none';
     }
-});
 
-async function loadFeed(personId) {
-    const feedContainer = document.getElementById('feed-container');
-    if (!feedContainer) {
-        console.error('Feed container not found!');
-        return;
-    }
-    feedContainer.innerHTML = '<p>Loading feed...</p>';
-
-    try {
-        const response = await api.getFeed(personId);
-
-        const threads = response.data ? response.data.threads : response.threads;
-
-        if (!threads || threads.length === 0) {
-            feedContainer.innerHTML = `<p>No threads to display.</p>`;
-        } else {
-            feedContainer.innerHTML = ''; // Clear "Loading feed..." message
-            threads.forEach(thread => {
-                const threadElement = window.renderThread(thread, thread.subject, personId);
-                feedContainer.appendChild(threadElement);
-            });
+    async function loadFeed(personId) {
+        const feedContainer = document.getElementById('feed-container');
+        if (!feedContainer) {
+            console.error('Feed container not found!');
+            return;
         }
-    } catch (error) {
-        console.error('Error loading feed:', error);
-        feedContainer.innerHTML = `<p>Error loading feed: ${error.message}. Please try again later.</p>`;
+        feedContainer.innerHTML = '<p>Loading feed...</p>';
+
+        try {
+            const response = await api.getFeed(personId);
+
+            const threads = response.data ? response.data.threads : response.threads;
+
+            if (!threads || threads.length === 0) {
+                feedContainer.innerHTML = `<p>No threads to display.</p>`;
+                allThreads = [];
+            } else {
+                allThreads = threads;
+                calculateTimelineRange();
+                displayFilteredThreads();
+            }
+        } catch (error) {
+            console.error('Error loading feed:', error);
+            feedContainer.innerHTML = `<p>Error loading feed: ${error.message}. Please try again later.</p>`;
+        }
     }
-}
+
+    function calculateTimelineRange() {
+        if (allThreads.length === 0) return;
+
+        const dates = allThreads.map(thread => new Date(thread.last_reply_time || thread.created_at));
+        timelineRange.start = new Date(Math.min(...dates));
+        timelineRange.end = new Date(Math.max(...dates));
+    }
+
+    function initializeTimeline() {
+        if (!timelineHandle || !timelineBar) return;
+
+        updateTimelinePosition();
+
+        // Add timeline interaction
+        let isDragging = false;
+        
+        timelineHandle.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+
+            const rect = timelineBar.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            const newPosition = Math.max(0, Math.min(1, y / rect.height));
+            
+            currentTimelinePosition = newPosition;
+            updateTimelinePosition();
+            filterThreadsByTimeline();
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Timeline bar click to jump to position
+        timelineBar.addEventListener('click', (e) => {
+            const rect = timelineBar.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            currentTimelinePosition = Math.max(0, Math.min(1, y / rect.height));
+            updateTimelinePosition();
+            filterThreadsByTimeline();
+        });
+    }
+
+    function updateTimelinePosition() {
+        if (!timelineHandle || !timelineRange.start || !timelineRange.end) return;
+
+        const percentage = currentTimelinePosition * 100;
+        timelineHandle.style.top = `${percentage}%`;
+
+        // Calculate current date based on position
+        const timeDiff = timelineRange.end.getTime() - timelineRange.start.getTime();
+        const currentTime = timelineRange.start.getTime() + (timeDiff * (1 - currentTimelinePosition));
+        const currentDate = new Date(currentTime);
+
+        // Update or create date indicator
+        let dateIndicator = timelineHandle.querySelector('.timeline-date');
+        if (!dateIndicator) {
+            dateIndicator = document.createElement('div');
+            dateIndicator.className = 'timeline-date';
+            timelineHandle.appendChild(dateIndicator);
+        }
+        dateIndicator.textContent = currentDate.toLocaleDateString();
+    }
+
+    function filterThreadsByTimeline() {
+        if (!timelineRange.start || !timelineRange.end) return;
+
+        const timeDiff = timelineRange.end.getTime() - timelineRange.start.getTime();
+        const currentTime = timelineRange.start.getTime() + (timeDiff * (1 - currentTimelinePosition));
+        const filterDate = new Date(currentTime);
+
+        // Filter threads based on timeline position
+        const filteredThreads = allThreads.filter(thread => {
+            const threadDate = new Date(thread.last_reply_time || thread.created_at);
+            return threadDate <= filterDate;
+        });
+
+        displayFilteredThreads(filteredThreads);
+    }
+
+    function displayFilteredThreads(threads = allThreads) {
+        const feedContainer = document.getElementById('feed-container');
+        if (!feedContainer) return;
+
+        feedContainer.innerHTML = '';
+        
+        if (threads.length === 0) {
+            feedContainer.innerHTML = '<p>No threads to display for this time period.</p>';
+            return;
+        }
+
+        threads.forEach(thread => {
+            const threadElement = window.renderThread(thread, thread.subject, personId);
+            feedContainer.appendChild(threadElement);
+        });
+    }
+});

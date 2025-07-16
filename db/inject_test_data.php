@@ -155,17 +155,19 @@ function inject_initial_data(PDO $pdo): void
     $email_recipients_stmt = $pdo->prepare("INSERT INTO email_recipients (email_id, person_id, type) VALUES (:email_id, :person_id, :type)");
     $attachments_stmt = $pdo->prepare("INSERT INTO attachments (email_id, filename, mimetype, filesize_bytes, filepath_on_disk) VALUES (:email_id, :filename, :mimetype, :filesize_bytes, :filepath_on_disk)");
 
-    // Modified email_stmt to include body_html
-    $email_stmt_with_html = $pdo->prepare("INSERT INTO emails (thread_id, user_id, group_id, subject, body_text, body_html, message_id_header, parent_email_id) VALUES (:thread_id, :user_id, :group_id, :subject, :body_text, :body_html, :message_id_header, :parent_email_id)");
+    // Modified email_stmt to include body_html and created_at
+    $email_stmt_with_html = $pdo->prepare("INSERT INTO emails (thread_id, user_id, group_id, subject, body_text, body_html, message_id_header, parent_email_id, created_at) VALUES (:thread_id, :user_id, :group_id, :subject, :body_text, :body_html, :message_id_header, :parent_email_id, :created_at)");
     // Original email_stmt for text-only emails (can be merged, but kept separate for clarity of example)
-    $email_stmt_text_only = $pdo->prepare("INSERT INTO emails (thread_id, user_id, group_id, subject, body_text, message_id_header, parent_email_id) VALUES (:thread_id, :user_id, :group_id, :subject, :body_text, :message_id_header, :parent_email_id)");
+    $email_stmt_text_only = $pdo->prepare("INSERT INTO emails (thread_id, user_id, group_id, subject, body_text, message_id_header, parent_email_id, created_at) VALUES (:thread_id, :user_id, :group_id, :subject, :body_text, :message_id_header, :parent_email_id, :created_at)");
 
 
     $initial_posts_data = [
         [
             'username' => 'alice_k', 'group_name' => null, 'subject' => 'New Feature Deployed',
             'body_text' => 'Just deployed a new feature! #proud',
-            'recipients' => ['to' => ['bob_the_builder'], 'cc' => ['diana_prince']]
+            'recipients' => ['to' => ['bob_the_builder'], 'cc' => ['diana_prince']],
+            'created_at' => date('Y-m-d H:i:s', strtotime('-2 days')),
+            'status' => 'read'
         ],
         [
             'username' => 'bob_the_builder', 'group_name' => null, 'subject' => 'Next Big Project',
@@ -174,40 +176,77 @@ function inject_initial_data(PDO $pdo): void
             'recipients' => ['to' => ['alice_k']],
             'attachments' => [
                 ['filename' => 'project_brief.pdf', 'mimetype' => 'application/pdf', 'filesize' => 102400, 'filepath' => '/attachments/project_brief_bob.pdf']
-            ]
+            ],
+            'created_at' => date('Y-m-d H:i:s', strtotime('-5 days')),
+            'status' => 'unread'
         ],
         [
-            'username' => 'alice_k', 'group_name' => 'Developers Corner', 'subject' => 'PHP 8.3 Features Discussion', // Renamed for clarity
-            'body_text' => 'Anyone familiar with the new PHP 8.3 features? Let\'s discuss the JIT improvements and new functions.'
+            'username' => 'alice_k', 'group_name' => 'Developers Corner', 'subject' => 'PHP 8.3 Features Discussion',
+            'body_text' => 'Anyone familiar with the new PHP 8.3 features? Let\'s discuss the JIT improvements and new functions.',
+            'created_at' => date('Y-m-d H:i:s', strtotime('-1 day')),
+            'status' => 'read'
         ],
         [
-            'username' => 'bob_the_builder', 'group_name' => 'Developers Corner', 'subject' => 'Library Updates and Security', // Renamed
-            'body_text' => 'Just pushed some updates to our main library. Please review the security patches ASAP.'
+            'username' => 'bob_the_builder', 'group_name' => 'Developers Corner', 'subject' => 'Library Updates and Security',
+            'body_text' => 'Just pushed some updates to our main library. Please review the security patches ASAP.',
+            'created_at' => date('Y-m-d H:i:s', strtotime('-3 hours')),
+            'status' => 'unread'
         ],
         [
             'username' => 'charlie_brown', 'group_name' => 'Book Club', 'subject' => 'Finished "The Hitchhiker\'s Guide to the Galaxy"',
             'body_text' => 'Just finished reading "The Hitchhiker\'s Guide to the Galaxy". What a ride! 42!',
-            'body_html' => '<p>Just finished reading "The Hitchhiker\'s Guide to the Galaxy". What a ride! <strong>42!</strong></p>'
+            'body_html' => '<p>Just finished reading "The Hitchhiker\'s Guide to the Galaxy". What a ride! <strong>42!</strong></p>',
+            'created_at' => date('Y-m-d H:i:s', strtotime('-1 week')),
+            'status' => 'read'
         ],
         [
-            'username' => 'bob_the_builder', 'group_name' => 'Book Club', 'subject' => 'Next up: "Dune" by Frank Herbert', // Renamed
-            'body_text' => 'Next up: "Dune". Any fans here? The spice must flow!'
+            'username' => 'bob_the_builder', 'group_name' => 'Book Club', 'subject' => 'Next up: "Dune" by Frank Herbert',
+            'body_text' => 'Next up: "Dune". Any fans here? The spice must flow!',
+            'created_at' => date('Y-m-d H:i:s', strtotime('-4 days')),
+            'status' => 'important-info'
         ],
         [
             'username' => 'diana_prince', 'group_name' => 'Photography Enthusiasts', 'subject' => 'Golden Hour Shots',
             'body_text' => 'Captured some amazing shots during golden hour yesterday. Will share soon!',
             'attachments' => [
                 ['filename' => 'golden_hour_preview.jpg', 'mimetype' => 'image/jpeg', 'filesize' => 204800, 'filepath' => '/attachments/gh_preview_diana.jpg']
-            ]
+            ],
+            'created_at' => date('Y-m-d H:i:s', strtotime('-6 hours')),
+            'status' => 'unread'
         ],
         [
             'username' => 'edward_nigma', 'group_name' => 'Gamers United', 'subject' => 'New Co-op Game Night?',
-            'body_text' => 'Riddle me this: What game has puzzles, adventure, and requires teamwork? Let\'s find one for our next game night!'
+            'body_text' => 'Riddle me this: What game has puzzles, adventure, and requires teamwork? Let\'s find one for our next game night!',
+            'created_at' => date('Y-m-d H:i:s', strtotime('-2 weeks')),
+            'status' => 'follow-up'
         ],
-         [
+        [
             'username' => 'alice_k', 'group_name' => 'Project Phoenix (secret)', 'subject' => 'Phase 1 Complete',
             'body_text' => 'Team, Phase 1 of Project Phoenix is officially complete. Documentation is on the shared drive. Great work everyone!',
-            'recipients' => ['bcc' => ['edward_nigma']] // Example of BCC within a group context (though delivery logic handles group members)
+            'recipients' => ['bcc' => ['edward_nigma']],
+            'created_at' => date('Y-m-d H:i:s', strtotime('-1 hour')),
+            'status' => 'important-info'
+        ],
+        // Add more historical data
+        [
+            'username' => 'charlie_brown', 'group_name' => null, 'subject' => 'Weekend Plans',
+            'body_text' => 'Anyone interested in a weekend hiking trip? I found a great trail.',
+            'recipients' => ['to' => ['alice_k', 'bob_the_builder', 'diana_prince']],
+            'created_at' => date('Y-m-d H:i:s', strtotime('-3 weeks')),
+            'status' => 'read'
+        ],
+        [
+            'username' => 'diana_prince', 'group_name' => 'Photography Enthusiasts', 'subject' => 'Camera Equipment Sale',
+            'body_text' => 'Found some great deals on camera equipment. Check out this link!',
+            'body_html' => '<p>Found some great deals on camera equipment. <a href="#">Check out this link!</a></p>',
+            'created_at' => date('Y-m-d H:i:s', strtotime('-1 month')),
+            'status' => 'read'
+        ],
+        [
+            'username' => 'edward_nigma', 'group_name' => 'Developers Corner', 'subject' => 'Code Review Request',
+            'body_text' => 'Can someone review my latest pull request? It\'s a critical bug fix.',
+            'created_at' => date('Y-m-d H:i:s', strtotime('-30 minutes')),
+            'status' => 'unread'
         ],
     ];
 
@@ -228,6 +267,7 @@ function inject_initial_data(PDO $pdo): void
         $sender_user_id = $user_ids[$email_data['username']];
         $current_group_id = isset($email_data['group_name']) && isset($group_ids[$email_data['group_name']]) ? $group_ids[$email_data['group_name']] : null;
         $message_id_header = "<" . uniqid('', true) . "@epistol.local>";
+        $created_at = isset($email_data['created_at']) ? $email_data['created_at'] : date('Y-m-d H:i:s');
 
         $email_params = [
             'thread_id' => $thread_id,
@@ -236,7 +276,8 @@ function inject_initial_data(PDO $pdo): void
             'subject' => $email_data['subject'],
             'body_text' => $email_data['body_text'],
             'message_id_header' => $message_id_header,
-            'parent_email_id' => $parent_email_id
+            'parent_email_id' => $parent_email_id,
+            'created_at' => $created_at
         ];
 
         if (isset($email_data['body_html'])) {
@@ -303,13 +344,14 @@ function inject_initial_data(PDO $pdo): void
             }
         }
         $all_recipient_user_ids = array_unique($all_recipient_user_ids); // Remove duplicates
+        $email_status = isset($email_data['status']) ? $email_data['status'] : 'unread';
 
         foreach ($all_recipient_user_ids as $recipient_user_id) {
             if ($recipient_user_id !== $sender_user_id) { // Sender doesn't get a status for their own sent mail here
                 $email_status_stmt->execute([
                     'email_id' => $email_id,
                     'user_id' => $recipient_user_id,
-                    'status' => 'unread'
+                    'status' => $email_status
                 ]);
             }
         }
@@ -330,6 +372,7 @@ function inject_initial_data(PDO $pdo): void
         $sender_user_id = $user_ids[$email_data_item['username']];
         $current_group_id = isset($email_data_item['group_name']) && isset($group_ids[$email_data_item['group_name']]) ? $group_ids[$email_data_item['group_name']] : null;
         $thread_subject_key = $email_data_item['subject'] . "_" . ($current_group_id ?? 'personal') . "_" . $sender_user_id; // more unique key
+        $created_at = isset($email_data_item['created_at']) ? $email_data_item['created_at'] : date('Y-m-d H:i:s');
 
         $pdo->beginTransaction();
         try {
@@ -344,8 +387,8 @@ function inject_initial_data(PDO $pdo): void
             $email_id = insert_email_with_details($pdo, $email_data_item, $thread_id, null, $user_ids, $group_ids, $person_ids_by_username, $email_stmt_text_only, $email_stmt_with_html, $email_recipients_stmt, $attachments_stmt, $email_status_stmt, $group_members_stmt);
             $email_ids_map[$thread_subject_key] = $email_id;
             
-            usleep(10000); // 10ms delay
-            $update_thread_activity_stmt->execute(['timestamp' => date('Y-m-d H:i:s'), 'thread_id' => $thread_id]);
+            // Use the custom created_at timestamp for thread activity
+            $update_thread_activity_stmt->execute(['timestamp' => $created_at, 'thread_id' => $thread_id]);
             $pdo->commit();
             echo "  Thread and email by '{$email_data_item['username']}'" . ($email_data_item['group_name'] ? " in '{$email_data_item['group_name']}'" : "") . " inserted (Email ID: $email_id).\n";
         } catch (Exception $e) {

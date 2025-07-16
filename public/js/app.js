@@ -255,7 +255,86 @@ function initializeEventListeners() {
     });
 
 
-    // Removed profile modal event listeners
+    // Add navbar functionality
+    const searchBtn = document.getElementById('search-btn');
+    const searchField = document.getElementById('search-field');
+    const notificationsBtn = document.getElementById('notifications-btn');
+    const groupsBtn = document.getElementById('groups-btn');
+    const profileBtn = document.getElementById('profile-btn');
+
+    // Search functionality
+    if (searchBtn && searchField) {
+        searchBtn.addEventListener('click', () => {
+            const query = searchField.value.trim();
+            if (query) {
+                performSearch(query);
+            }
+        });
+
+        searchField.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const query = searchField.value.trim();
+                if (query) {
+                    performSearch(query);
+                }
+            }
+        });
+    }
+
+    // Navigation button handlers
+    if (notificationsBtn) {
+        notificationsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showNotifications();
+        });
+    }
+
+    if (groupsBtn) {
+        groupsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleLeftSidebar();
+        });
+    }
+
+    if (profileBtn) {
+        profileBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showCurrentUserProfile();
+        });
+    }
+
+    function performSearch(query) {
+        console.log('Performing search for:', query);
+        // TODO: Implement search API call
+        // For now, just filter the current feed
+        const threads = document.querySelectorAll('.thread');
+        threads.forEach(thread => {
+            const text = thread.textContent.toLowerCase();
+            if (text.includes(query.toLowerCase())) {
+                thread.style.display = 'block';
+            } else {
+                thread.style.display = 'none';
+            }
+        });
+    }
+
+    function showNotifications() {
+        // TODO: Implement notifications panel
+        console.log('Showing notifications');
+        alert('Notifications feature coming soon!');
+    }
+
+    function toggleLeftSidebar() {
+        if (leftSidebar) {
+            leftSidebar.classList.toggle('collapsed');
+        }
+    }
+
+    function showCurrentUserProfile() {
+        // TODO: Get current user's person ID
+        const currentUserId = 1; // Placeholder
+        window.location.href = `profile.php?id=${currentUserId}`;
+    }
 
     if (createGroupBtn) {
         createGroupBtn.addEventListener('click', async () => {
