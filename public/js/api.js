@@ -134,7 +134,7 @@ async getProfile(personId) {
             throw new Error(`Failed to fetch profile: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
-        return data; // Expects { name, email_addresses, notes, threads: [...] }
+        return data.data; // Return the data property from the response
     } catch (error) {
         console.error('Network error or JSON parsing error fetching profile:', error);
         throw error;
@@ -157,7 +157,7 @@ async getGroups() {
         // Assuming the API returns an object like { groups: [...] } or just [...]
         // Let's assume it returns an array directly for now, as used in app.js and group.js
         const data = await response.json();
-        return data; // Expects [{ group_id, name }, ...]
+        return data.data ? data.data.groups : data.groups; // Handle both response formats
     } catch (error) {
         console.error('Network error or JSON parsing error fetching groups:', error);
         throw error;
@@ -184,7 +184,7 @@ async getGroupMembers(groupId) {
         // Assuming the API returns an object like { members: [...] } or just [...]
         // Let's assume it returns an array of members directly.
         const data = await response.json();
-        return data; // Expects [{ person_id, name }, ...]
+        return data.data ? data.data.members : data.members; // Handle both response formats
     } catch (error) {
         console.error('Network error or JSON parsing error fetching group members:', error);
         throw error;
@@ -287,7 +287,7 @@ window.renderEmailAsPost = function(email, threadSubject, currentUserId, isFirst
                 </div>
                 <div class="post-author-meta">
                     <div class="post-author-line">
-                        <a href="#" class="author-name" data-person-id="${email.sender_id || ''}">${email.sender_name || 'Unknown Sender'}</a>
+                        <a href="#" class="author-name" data-person-id="${email.sender_person_id || ''}">${email.sender_name || 'Unknown Sender'}</a>
                         <span class="recipient-separator">▸</span>
                         <span class="recipient-name">${recipientDisplay}</span>
                     </div>

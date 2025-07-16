@@ -80,7 +80,7 @@ try {
     $pdo = get_db_connection();
 
     // Check if group exists
-    $stmt_check_group = $pdo->prepare("SELECT group_id FROM groups WHERE group_id = :group_id");
+    $stmt_check_group = $pdo->prepare("SELECT id FROM groups WHERE id = :group_id");
     $stmt_check_group->bindParam(':group_id', $group_id);
     $stmt_check_group->execute();
     if (!$stmt_check_group->fetch()) {
@@ -98,11 +98,13 @@ try {
     $offset = ($page - 1) * $limit;
 
     // Query to fetch group members with person details
-    // Assuming 'persons' table has 'person_id', 'name', 'primary_email_address', 'avatar_url'
-    // Assuming 'group_members' table has 'group_id', 'person_id', 'joined_at'
-    $sql = "SELECT p.person_id, p.name, p.primary_email_address AS email, p.avatar_url, gm.joined_at
+    // group_members table has user_id, join with users to get person_id, then join with persons
+    $sql = "SELECT p.id as person_id, p.name, p.avatar_url, 
+                   ea.email_address as email, gm.joined_at
             FROM group_members gm
-            JOIN persons p ON gm.person_id = p.person_id
+            JOIN users u ON gm.user_id = u.id
+            JOIN persons p ON u.person_id = p.id
+            LEFT JOIN email_addresses ea ON p.id = ea.person_id AND ea.is_primary = 1
             WHERE gm.group_id = :group_id
             ORDER BY p.name ASC
             LIMIT :limit OFFSET :offset";

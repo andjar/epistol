@@ -28,10 +28,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Assuming getGroups() is available and returns an array of all groups
         let groupName = `Group ID: ${groupId}`; // Default name
         try {
-            const allGroups = await getGroups(); // from api.js
-            const currentGroup = allGroups.find(g => g.group_id === groupId);
-            if (currentGroup && currentGroup.name) {
-                groupName = currentGroup.name;
+            const allGroups = await api.getGroups(); // from api.js
+            const currentGroup = allGroups.find(g => g.group_id == groupId);
+            if (currentGroup && currentGroup.group_name) {
+                groupName = currentGroup.group_name;
             }
         } catch (e) {
             console.warn("Could not fetch all groups to determine name, using ID as name.", e);
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             groupMembersContainer.innerHTML = '<h2>Group Members</h2>';
             try {
                 // Assuming getGroupMembers(groupId) will be available in api.js
-                const members = await getGroupMembers(groupId); // Now calling the actual function
+                const members = await api.getGroupMembers(groupId); // Now calling the actual function
 
                 if (members && members.length > 0) {
                     const ul = document.createElement('ul');
@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (groupFeedContainer) {
             groupFeedContainer.innerHTML = '<h2>Group Feed</h2>';
             try {
-                const feedResponse = await getFeed({ groupId: groupId }); // from api.js
+                const feedResponse = await api.getFeed(1, { groupId: groupId }); // from api.js
                 if (feedResponse && feedResponse.threads && feedResponse.threads.length > 0) {
                     feedResponse.threads.forEach(thread => {
                         if (typeof window.renderThread === 'function') {

@@ -68,9 +68,9 @@ try {
 
     // Fetch person details
     $stmt_person = $pdo->prepare(
-        "SELECT person_id, name, bio, avatar_url, created_at
+        "SELECT id, name, avatar_url, created_at
          FROM persons
-         WHERE person_id = :person_id"
+         WHERE id = :person_id"
     );
     $stmt_person->bindParam(':person_id', $person_id);
     $stmt_person->execute();
@@ -93,10 +93,9 @@ try {
 
     // Prepare the final profile data
     $profile_output = [
-        'id' => $person_data['person_id'],
+        'id' => $person_data['id'],
         'name' => $person_data['name'],
         'avatar_url' => $person_data['avatar_url'],
-        'bio' => $person_data['bio'],
         'created_at' => $person_data['created_at'],
         'email_addresses' => array_map(function($email) {
             return [
@@ -140,8 +139,8 @@ try {
                 s_ea.email_address AS sender_email
             FROM emails e
             JOIN users s_u ON e.user_id = s_u.id
-            JOIN persons s_p ON s_u.person_id = s_p.person_id
-            JOIN email_addresses s_ea ON s_p.person_id = s_ea.person_id AND s_ea.is_primary = 1
+            JOIN persons s_p ON s_u.person_id = s_p.id
+            JOIN email_addresses s_ea ON s_p.id = s_ea.person_id AND s_ea.is_primary = 1
             WHERE e.thread_id = :current_thread_id
             ORDER BY e.created_at ASC"
         );
@@ -153,7 +152,7 @@ try {
                 er.type AS recipient_type
             FROM email_recipients er
             JOIN email_addresses r_ea ON er.email_address_id = r_ea.id
-            JOIN persons r_p ON r_ea.person_id = r_p.person_id
+            JOIN persons r_p ON r_ea.person_id = r_p.id
             WHERE er.email_id = :current_email_id"
         );
 

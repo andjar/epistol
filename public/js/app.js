@@ -196,12 +196,12 @@ function initializeEventListeners() {
             composeBody.value = `\n\n---- Forwarded message ----\nFrom: ${originalSender}\nDate: ${originalDate}\nSubject: ${originalSubject}\n\n${originalBody}`;
             showComposeModal();
             composeTo.focus(); // Focus on "To" field for forwarding
-        } else if (event.target.classList.contains('sender-link')) {
+        } else if (event.target.classList.contains('author-name')) {
             const personId = event.target.dataset.personId;
             if (personId) {
                 showProfile(personId);
             } else {
-                console.warn('Sender link clicked, but no person-id found.', target);
+                console.warn('Author link clicked, but no person-id found.', event.target);
             }
         }
         // Note: Status change is handled by a 'change' event listener below, not 'click'.

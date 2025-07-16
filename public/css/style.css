@@ -158,6 +158,12 @@ img {
     border-right: none;
     border-left: 1px solid var(--card-border-color);
 }
+
+#right-sidebar.collapsed {
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+}
 #right-sidebar h2, #right-sidebar p {
     color: var(--text-color-secondary);
 }
