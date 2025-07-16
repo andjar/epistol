@@ -39,40 +39,39 @@ $page_title = "User Profile"; // Default title
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <header style="background-color: #007bff; color: white; padding: 10px 20px; text-align: center;">
-        <h1>User Profile Page</h1>
-    </header>
+    <?php include 'common/header.php'; ?>
 
-    <div class="page-container">
-        <p><a href="index.php" class="back-link">Back to Feed</a></p>
+    <div class="main-container">
+        <aside id="left-sidebar" class="sidebar">
+            <?php if ($profile_id): ?>
+                <h1 id="profile-page-name">Profile for ID: <?php echo htmlspecialchars($profile_id); ?></h1>
 
-        <?php if ($profile_id): ?>
-            <h1 id="profile-page-name">Profile for ID: <?php echo htmlspecialchars($profile_id); ?></h1>
+                <div id="profile-emails-container">
+                    <h2>Emails</h2>
+                    <p>john.doe@example.com, jane.doe@example.com (Placeholder)</p>
+                </div>
 
-            <div id="profile-emails-container">
-                <h2>Emails</h2>
-                <p>john.doe@example.com, jane.doe@example.com (Placeholder)</p>
-            </div>
+                <div id="profile-notes-container">
+                    <h2>Notes</h2>
+                    <p>This is a placeholder for user notes. (Placeholder)</p>
+                </div>
 
-            <div id="profile-notes-container">
-                <h2>Notes</h2>
-                <p>This is a placeholder for user notes. (Placeholder)</p>
-            </div>
+            <?php else: ?>
+                <h1>Profile Not Found</h1>
+                <p>The requested profile could not be found or no ID was provided.</p>
+            <?php endif; ?>
+        </aside>
 
-            <div id="profile-threads-container">
-                <!-- Content will be dynamically injected by profile.js -->
-                <p>Loading correspondence...</p>
-            </div>
-        <?php else: ?>
-            <h1>Profile Not Found</h1>
-            <p>The requested profile could not be found or no ID was provided.</p>
-        <?php endif; ?>
+        <?php include 'common/feed.php'; ?>
+
+        <?php include 'common/timeline.php'; ?>
     </div>
 
     <footer style="text-align: center; padding: 20px; margin-top: 30px; font-size: 0.9em; color: #666; background-color: #f0f0f0;">
         <p>&copy; <?php echo date("Y"); ?> Epistol</p>
     </footer>
     <script src="js/api.js"></script>
+    <script src="js/common.js"></script>
     <script src="js/profile.js" defer></script>
 </body>
 </html>

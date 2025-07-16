@@ -9,21 +9,7 @@
 <body>
     <div id="global-loader" class="global-loader" style="display:none;">Loading...</div>
 
-    <header id="top-bar">
-        <button id="toggle-groups-sidebar-btn" class="sidebar-toggle-btn">☰</button>
-        <div class="logo-area">
-            <h1>Epistol</h1>
-        </div>
-        <div class="search-area">
-            <input type="text" placeholder="Search emails..." id="search-field">
-            {_SEARCH_ICON_PLACEHOLDER_}
-        </div>
-        <nav class="navigation-menus">
-            {_MENU_PLACEHOLDER_}
-        </nav>
-        <button id="new-email-btn">New Email</button>
-        <button id="toggle-right-sidebar-btn" class="sidebar-toggle-btn">☰</button>
-    </header>
+    <?php include 'common/header.php'; ?>
 
     <div class="main-container">
         <aside id="left-sidebar" class="sidebar">
@@ -55,17 +41,9 @@
             </div>
         </aside>
 
-        <main id="main-content">
-            <div id="feed-container">
-                <!-- Email threads will be loaded here by JavaScript -->
-            </div>
-        </main>
+        <?php include 'common/feed.php'; ?>
 
-        <div id="timeline-container">
-            <div id="timeline-bar">
-                <div id="timeline-handle"></div>
-            </div>
-        </div>
+        <?php include 'common/timeline.php'; ?>
 
         <aside id="right-sidebar" class="sidebar">
             <h2>Right Sidebar</h2>
@@ -109,6 +87,7 @@
         <p>&copy; 2025 Epistol</p>
     </footer>
     <script src="js/api.js?v=<?php echo time(); ?>"></script>
+    <script src="js/common.js?v=<?php echo time(); ?>"></script>
     <script src="js/app.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
