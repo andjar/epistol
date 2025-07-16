@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
         // Assuming getProfile is globally available from api.js
-        const profileData = await getProfile(personId);
+        const profileData = await api.getProfile(personId);
 
         if (!profileData) {
             pageContainer.innerHTML = `<h1>Error</h1><p>Profile not found for ID: ${personId}.</p><p><a href="index.php" class="back-link">Back to Feed</a></p>`;
@@ -44,9 +44,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             profileEmailsContainer.innerHTML = '<h2>Emails</h2>';
             if (profileData.email_addresses && profileData.email_addresses.length > 0) {
                 const emailList = document.createElement('ul');
-                profileData.email_addresses.forEach(email => {
+                profileData.email_addresses.forEach(emailObj => {
                     const li = document.createElement('li');
-                    li.textContent = email;
+                    li.textContent = emailObj.email + (emailObj.is_primary ? ' (Primary)' : '');
                     emailList.appendChild(li);
                 });
                 profileEmailsContainer.appendChild(emailList);
