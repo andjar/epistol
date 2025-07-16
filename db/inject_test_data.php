@@ -344,6 +344,7 @@ function inject_initial_data(PDO $pdo): void
             $email_id = insert_email_with_details($pdo, $email_data_item, $thread_id, null, $user_ids, $group_ids, $person_ids_by_username, $email_stmt_text_only, $email_stmt_with_html, $email_recipients_stmt, $attachments_stmt, $email_status_stmt, $group_members_stmt);
             $email_ids_map[$thread_subject_key] = $email_id;
             
+            usleep(10000); // 10ms delay
             $update_thread_activity_stmt->execute(['timestamp' => date('Y-m-d H:i:s'), 'thread_id' => $thread_id]);
             $pdo->commit();
             echo "  Thread and email by '{$email_data_item['username']}'" . ($email_data_item['group_name'] ? " in '{$email_data_item['group_name']}'" : "") . " inserted (Email ID: $email_id).\n";
@@ -393,6 +394,7 @@ function inject_initial_data(PDO $pdo): void
         $pdo->beginTransaction();
         try {
             $reply_email_id = insert_email_with_details($pdo, $reply_data, $thread_id, $parent_email_id, $user_ids, $group_ids, $person_ids_by_username, $email_stmt_text_only, $email_stmt_with_html, $email_recipients_stmt, $attachments_stmt, $email_status_stmt, $group_members_stmt);
+            usleep(10000); // 10ms delay
             $update_thread_activity_stmt->execute(['timestamp' => date('Y-m-d H:i:s'), 'thread_id' => $thread_id]);
             $pdo->commit();
             echo "  Reply by '$replier_username' to '$original_thread_key' inserted (Email ID: $reply_email_id).\n";
@@ -461,6 +463,7 @@ function inject_initial_data(PDO $pdo): void
             $forward_email_id = insert_email_with_details($pdo, $forward_data, $new_thread_id, $original_email_id, $user_ids, $group_ids, $person_ids_by_username, $email_stmt_text_only, $email_stmt_with_html, $email_recipients_stmt, $attachments_stmt, $email_status_stmt, $group_members_stmt);
             $email_ids_map[$fwd_thread_key] = $forward_email_id; // Store email_id of the forward itself
 
+            usleep(10000); // 10ms delay
             $update_thread_activity_stmt->execute(['timestamp' => date('Y-m-d H:i:s'), 'thread_id' => $new_thread_id]);
             $pdo->commit();
             echo "  Forward by '$forwarder_username' of '$original_thread_key_to_forward' created (New Thread ID: $new_thread_id, Email ID: $forward_email_id).\n";
@@ -601,6 +604,7 @@ function inject_initial_data(PDO $pdo): void
         ], $current_thread_id, null, $user_ids, $group_ids, $person_ids_by_username, $email_stmt_text_only, $email_stmt_with_html, $email_recipients_stmt, $attachments_stmt, $email_status_stmt, $group_members_stmt);
         $email_ids_map[$long_thread_key] = $current_email_id; // Store first email ID
 
+        usleep(10000); // 10ms delay
         $update_thread_activity_stmt->execute(['timestamp' => date('Y-m-d H:i:s'),'thread_id' => $current_thread_id]);
         $pdo->commit();
         echo "  Long thread started by Diana (Email ID: $current_email_id).\n";

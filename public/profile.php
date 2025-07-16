@@ -63,9 +63,8 @@ $page_title = "User Profile"; // Default title
         </aside>
 
         <?php include 'common/feed.php'; ?>
-
-        <?php include 'common/timeline.php'; ?>
     </div>
+    <?php include 'common/timeline.php'; ?>
 
     <footer style="text-align: center; padding: 20px; margin-top: 30px; font-size: 0.9em; color: #666; background-color: #f0f0f0;">
         <p>&copy; <?php echo date("Y"); ?> Epistol</p>

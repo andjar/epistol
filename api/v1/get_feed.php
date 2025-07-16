@@ -16,6 +16,7 @@ try {
     $user_id = isset($_GET['user_id']) ? filter_var($_GET['user_id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) : null;
     $status_filter = isset($_GET['status']) && !empty($_GET['status']) ? trim($_GET['status']) : null;
     $group_id_filter = isset($_GET['group_id']) && !empty($_GET['group_id']) ? filter_var($_GET['group_id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) : null;
+    $person_id_filter = isset($_GET['person_id']) && !empty($_GET['person_id']) ? filter_var($_GET['person_id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) : null;
 
     // Use ITEMS_PER_PAGE from config.php if defined, otherwise fallback to 20.
     $default_limit = defined('ITEMS_PER_PAGE') ? ITEMS_PER_PAGE : 20;
@@ -104,6 +105,11 @@ try {
         $bindings[':group_id_filter'] = $group_id_filter;
     }
 
+    if ($person_id_filter !== null) {
+        $sql .= " AND le.sender_person_id = :person_id_filter";
+        $bindings[':person_id_filter'] = $person_id_filter;
+    }
+
     if ($status_filter !== null) {
         if ($status_filter === 'unread') {
             $sql .= " AND (le.email_status = 'unread' OR le.email_status IS NULL)";
@@ -124,9 +130,12 @@ try {
         FROM threads t_outer
         JOIN (
             SELECT e_inner.thread_id, e_inner.id AS latest_email_id,
+                   p_inner.id as sender_person_id,
                    COALESCE(es_inner.status, 'unread') AS latest_email_status,
                    ROW_NUMBER() OVER(PARTITION BY e_inner.thread_id ORDER BY e_inner.created_at DESC) as rn
             FROM emails e_inner
+            JOIN users u_inner ON e_inner.user_id = u_inner.id
+            LEFT JOIN persons p_inner ON u_inner.person_id = p_inner.id
             LEFT JOIN email_statuses es_inner ON e_inner.id = es_inner.email_id AND es_inner.user_id = :current_user_id_count_outer
         ) le_check ON t_outer.id = le_check.thread_id AND le_check.rn = 1
         WHERE 1=1";
@@ -136,6 +145,11 @@ try {
     if ($group_id_filter !== null) {
         $count_sql_outer .= " AND t_outer.group_id = :group_id_filter_count_outer";
         $count_bindings_outer[':group_id_filter_count_outer'] = $group_id_filter;
+    }
+
+    if ($person_id_filter !== null) {
+        $count_sql_outer .= " AND le_check.sender_person_id = :person_id_filter_count_outer";
+        $count_bindings_outer[':person_id_filter_count_outer'] = $person_id_filter;
     }
 
     if ($status_filter !== null) {
