@@ -10,6 +10,7 @@
     <div id="global-loader" class="global-loader" style="display:none;">Loading...</div>
 
     <header id="top-bar">
+        <button id="toggle-groups-sidebar-btn" class="sidebar-toggle-btn">☰</button>
         <div class="logo-area">
             <h1>Epistol</h1>
         </div>
@@ -19,14 +20,13 @@
         </div>
         <nav class="navigation-menus">
             {_MENU_PLACEHOLDER_}
-            <button id="toggle-right-sidebar-btn" style="margin-left: 10px;">Toggle Right Sidebar</button>
         </nav>
         <button id="new-email-btn">New Email</button>
+        <button id="toggle-right-sidebar-btn" class="sidebar-toggle-btn">☰</button>
     </header>
 
     <div class="main-container">
         <aside id="left-sidebar" class="sidebar">
-            <button id="toggle-groups-sidebar-btn">Toggle Groups</button>
             <h2>Groups</h2>
             <div id="groups-list-container">
                 <!-- Groups will be loaded here -->
@@ -60,6 +60,12 @@
                 <!-- Email threads will be loaded here by JavaScript -->
             </div>
         </main>
+
+        <div id="timeline-container">
+            <div id="timeline-bar">
+                <div id="timeline-handle"></div>
+            </div>
+        </div>
 
         <aside id="right-sidebar" class="sidebar">
             <h2>Right Sidebar</h2>

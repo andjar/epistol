@@ -177,24 +177,13 @@ img {
     display: none;
 }
 
-/* Minimalist Sidebar Button Styling */
-#toggle-groups-sidebar-btn { 
-    display: block;
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 15px;
-    background-color: transparent; /* Toned down */
-    color: var(--text-color-secondary); /* Toned down */
-    border: 1px solid var(--card-border-color); /* Subtle border */
-    border-radius: var(--border-radius-sm);
+.sidebar-toggle-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
     cursor: pointer;
-    font-size: 0.9em;
-    text-align: center;
-    font-weight: 500;
-}
-#toggle-groups-sidebar-btn:hover {
-    background-color: #E9ECEF; /* Light hover */
-    color: var(--text-color-primary);
+    padding: 0 15px;
+    color: var(--text-color-secondary);
 }
 
 
@@ -205,6 +194,37 @@ img {
     padding: 15px; /* Reduced padding for tighter feed */
     height: calc(100vh - 60px); 
     overflow-y: auto;
+}
+
+#timeline-container {
+    width: 20px;
+    height: calc(100vh - 60px);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+}
+
+#timeline-bar {
+    width: 4px;
+    height: 90%;
+    background-color: #e0e0e0;
+    border-radius: 2px;
+    position: relative;
+}
+
+#timeline-handle {
+    width: 16px;
+    height: 16px;
+    background-color: var(--link-color);
+    border-radius: 50%;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    cursor: ns-resize;
+    z-index: 10;
 }
 
 #feed-container {
