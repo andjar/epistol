@@ -353,52 +353,6 @@ function initializeEventListeners() {
         });
     }
 
-    // Timeline Interaction
-    const timelineHandle = document.getElementById('timeline-handle');
-    const timelineBar = document.getElementById('timeline-bar');
-
-    if (timelineHandle && timelineBar) {
-        let isDragging = false;
-
-        timelineHandle.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            timelineHandle.style.cursor = 'ns-resize';
-            document.body.style.cursor = 'ns-resize'; // Change cursor for the whole page
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                timelineHandle.style.cursor = 'ns-resize';
-                document.body.style.cursor = 'default';
-                // Reload feed based on the new handle position
-                const handlePosition = parseFloat(timelineHandle.style.top) / 100;
-                filterFeedByTimeline(handlePosition);
-            }
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-
-            const timelineRect = timelineBar.getBoundingClientRect();
-            let newY = e.clientY - timelineRect.top;
-
-            // Constrain the handle within the timeline bar
-            if (newY < 0) newY = 0;
-            if (newY > timelineRect.height) newY = timelineRect.height;
-
-            timelineHandle.style.top = `${newY}px`;
-        });
-    }
-}
-
-function filterFeedByTimeline(position) {
-    const allThreads = Array.from(feedContainer.querySelectorAll('.thread'));
-    const visibleCount = Math.round(allThreads.length * (1 - position));
-
-    allThreads.forEach((thread, index) => {
-        thread.style.display = index < visibleCount ? 'block' : 'none';
-    });
 }
 
 // Global Loader Functions
