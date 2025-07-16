@@ -1,7 +1,7 @@
 <header id="top-bar">
     <button id="toggle-groups-sidebar-btn" class="sidebar-toggle-btn">☰</button>
     <div class="logo-area">
-        <h1>Epistol</h1>
+        <h1><a href="index.php">Epistol</a></h1>
     </div>
     <div class="search-area">
         <input type="text" placeholder="Search emails..." id="search-field">

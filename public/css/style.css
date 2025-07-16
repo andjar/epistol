@@ -227,6 +227,19 @@ img {
     z-index: 10;
 }
 
+.timeline-date {
+    position: absolute;
+    top: 50%;
+    left: 100%;
+    transform: translateY(-50%);
+    background-color: var(--link-color);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
 #feed-container {
     /* No specific background needed if #main-content has it */
 }

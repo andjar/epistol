@@ -355,6 +355,51 @@ function initializeEventListeners() {
 
 }
 
+// Timeline synchronization
+const mainContent = document.getElementById('main-content');
+const timelineHandle = document.getElementById('timeline-handle');
+const timelineContainer = document.getElementById('timeline-container');
+
+if (mainContent && timelineHandle && timelineContainer) {
+    mainContent.addEventListener('scroll', () => {
+        const scrollPercentage = mainContent.scrollTop / (mainContent.scrollHeight - mainContent.clientHeight);
+        const handlePosition = scrollPercentage * (timelineContainer.clientHeight - timelineHandle.clientHeight);
+        timelineHandle.style.top = `${handlePosition}px`;
+
+        // Find the first visible post
+        const posts = feedContainer.querySelectorAll('.post-card');
+        let firstVisiblePost = null;
+        for (const post of posts) {
+            const rect = post.getBoundingClientRect();
+            if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+                firstVisiblePost = post;
+                break;
+            }
+        }
+
+        if (firstVisiblePost) {
+            const timestampElement = firstVisiblePost.querySelector('.post-timestamp');
+            if (timestampElement) {
+                const date = new Date(timestampElement.textContent);
+                const options = { year: 'numeric', month: 'short', day: 'numeric' };
+                const formattedDate = date.toLocaleDateString('en-US', options);
+                
+                // Remove existing date display
+                const existingDateDisplay = timelineContainer.querySelector('.timeline-date');
+                if (existingDateDisplay) {
+                    existingDateDisplay.remove();
+                }
+
+                // Add new date display
+                const dateDisplay = document.createElement('div');
+                dateDisplay.className = 'timeline-date';
+                dateDisplay.textContent = formattedDate;
+                timelineContainer.appendChild(dateDisplay);
+            }
+        }
+    });
+}
+
 // Global Loader Functions
 function showGlobalLoader() {
     if (globalLoader) globalLoader.style.display = 'block';
