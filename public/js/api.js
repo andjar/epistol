@@ -19,6 +19,9 @@ async getFeed(userId, params = {}) {
     if (params.groupId) {
         url += `&group_id=${encodeURIComponent(params.groupId)}`;
     }
+    if (params.personId) {
+        url += `&person_id=${encodeURIComponent(params.personId)}`;
+    }
     if (params.page) {
         url += `&page=${encodeURIComponent(params.page)}`;
     }
@@ -72,6 +75,38 @@ async getThread(threadId, userId) {
     } catch (error) {
         console.error('Network error or JSON parsing error fetching thread:', error);
         throw error;
+    }
+},
+
+/**
+ * Creates a new group.
+ * @param {Object} groupData - The group data to send.
+ * @param {string} groupData.name - The name of the group.
+ * @returns {Promise<Object>} A promise that resolves to the server's response data on success.
+ * @throws {Error} Throws an error if the request fails or the server returns an error status.
+ */
+async createGroup(groupData) {
+    try {
+        const response = await fetch('/api/v1/create_group.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(groupData),
+        });
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+            const errorMessage = responseData.message || `HTTP error ${response.status}`;
+            console.error('Error creating group:', errorMessage, responseData);
+            throw new Error(errorMessage);
+        }
+
+        return responseData.data;
+    } catch (error) {
+        console.error('Network error, JSON parsing error, or error thrown from response handling:', error);
+        throw error.message ? error : new Error('Failed to create group due to a network or server issue.');
     }
 },
 

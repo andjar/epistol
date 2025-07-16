@@ -76,7 +76,7 @@ $status = $data['status'] ?? null;
 $allowed_statuses = ['read', 'follow-up', 'important-info', 'unread'];
 
 if (empty($post_id) || !is_numeric($post_id)) {
-    send_json_error('post_id is required and must be a number.', 400);
+    send_json_error('email_id is required and must be a number.', 400);
 }
 
 if (empty($user_id) || !is_numeric($user_id)) {
@@ -91,17 +91,17 @@ if (empty($status) || !in_array($status, $allowed_statuses)) {
 try {
     $pdo = get_db_connection();
 
-    // Check if a status already exists for this post_id and user_id
-    // Assuming post_statuses table has 'id' as PK, 'post_id', 'user_id', 'status', 'created_at', 'updated_at'
-    $stmt_check = $pdo->prepare("SELECT id FROM post_statuses WHERE post_id = :post_id AND user_id = :user_id");
-    $stmt_check->bindParam(':post_id', $post_id, PDO::PARAM_INT);
+    // Check if a status already exists for this email_id and user_id
+    // Assuming email_statuses table has 'id' as PK, 'email_id', 'user_id', 'status', 'created_at', 'updated_at'
+    $stmt_check = $pdo->prepare("SELECT id FROM email_statuses WHERE email_id = :email_id AND user_id = :user_id");
+    $stmt_check->bindParam(':email_id', $post_id, PDO::PARAM_INT);
     $stmt_check->bindParam(':user_id', $user_id, PDO::PARAM_INT);
     $stmt_check->execute();
     $existing_status = $stmt_check->fetch(PDO::FETCH_ASSOC);
 
     if ($existing_status) {
         // Update existing status
-        $stmt_update = $pdo->prepare("UPDATE post_statuses SET status = :status, updated_at = :updated_at WHERE id = :id");
+        $stmt_update = $pdo->prepare("UPDATE email_statuses SET status = :status, updated_at = :updated_at WHERE id = :id");
         $stmt_update->bindParam(':status', $status, PDO::PARAM_STR);
         $stmt_update->bindParam(':id', $existing_status['id'], PDO::PARAM_INT);
         $stmt_update->bindValue(':updated_at', date('Y-m-d H:i:s'));
@@ -113,8 +113,8 @@ try {
         }
     } else {
         // Insert new status
-        $stmt_insert = $pdo->prepare("INSERT INTO post_statuses (post_id, user_id, status, created_at, updated_at) VALUES (:post_id, :user_id, :status, :created_at, :updated_at)");
-        $stmt_insert->bindParam(':post_id', $post_id, PDO::PARAM_INT);
+        $stmt_insert = $pdo->prepare("INSERT INTO email_statuses (email_id, user_id, status, created_at, updated_at) VALUES (:email_id, :user_id, :status, :created_at, :updated_at)");
+        $stmt_insert->bindParam(':email_id', $post_id, PDO::PARAM_INT);
         $stmt_insert->bindParam(':user_id', $user_id, PDO::PARAM_INT);
         $stmt_insert->bindParam(':status', $status, PDO::PARAM_STR);
         $current_time = date('Y-m-d H:i:s');
