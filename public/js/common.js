@@ -132,6 +132,22 @@ window.renderThread = function(threadData, threadSubject, currentUserId) {
     return threadContainer;
 };
 
+/**
+ * Formats a timestamp into a relative time string (e.g., "2 hours ago")
+ */
+function formatRelativeTime(timestamp) {
+    const now = new Date();
+    const date = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    
+    return date.toLocaleDateString();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Timeline Interaction
     const timelineHandle = document.getElementById('timeline-handle');
@@ -173,11 +189,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function filterFeedByTimeline(position) {
+        // Get all threads
         const allThreads = Array.from(feedContainer.querySelectorAll('.thread'));
-        const visibleCount = Math.round(allThreads.length * (1 - position));
-
-        allThreads.forEach((thread, index) => {
-            thread.style.display = index < visibleCount ? 'block' : 'none';
+        
+        if (allThreads.length === 0) return;
+        
+        // Get thread dates for filtering
+        const threadDates = allThreads.map(thread => {
+            const threadId = thread.dataset.threadId;
+            // Try to find the timestamp in the thread's post timestamps
+            const timeElements = thread.querySelectorAll('.post-timestamp');
+            if (timeElements.length > 0) {
+                // Use the first timestamp we find
+                const timeText = timeElements[0].textContent;
+                // Parse the timestamp - this is a simplified approach
+                const date = new Date(timeText);
+                return { thread, date: date.getTime() };
+            }
+            // Fallback to current date if no timestamp found
+            return { thread, date: Date.now() };
+        });
+        
+        // Sort by date (newest first)
+        threadDates.sort((a, b) => b.date - a.date);
+        
+        // Calculate how many threads to show based on position
+        // position 0 = oldest only, position 1 = all threads
+        const visibleCount = Math.max(1, Math.round(threadDates.length * (1 - position)));
+        
+        // Show/hide threads
+        threadDates.forEach((item, index) => {
+            item.thread.style.display = index < visibleCount ? 'block' : 'none';
         });
     }
 });

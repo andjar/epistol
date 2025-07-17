@@ -118,20 +118,102 @@ img {
     color: var(--text-color-secondary);
 }
 
-#new-email-btn { /* This button can remain somewhat prominent for a key action */
-    background-color: var(--action-button-color);
+.nav-menu {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: 10px;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: var(--text-color-secondary);
+    border-radius: var(--border-radius-sm);
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.nav-link:hover {
+    background-color: var(--action-button-hover-bg);
+    color: var(--text-color-primary);
+}
+
+.nav-link svg {
+    flex-shrink: 0;
+}
+
+.nav-link span {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .nav-link span {
+        display: inline;
+    }
+}
+
+.search-area {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.search-btn {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--text-color-secondary);
+    border-radius: var(--border-radius-sm);
+    transition: all 0.2s ease;
+}
+
+.search-btn:hover {
+    background-color: var(--action-button-hover-bg);
+    color: var(--text-color-primary);
+}
+
+.new-email-btn {
+    background-color: var(--link-color);
     color: white;
-    padding: 0.5rem 1rem;
+    padding: 8px 16px;
     border: none;
     border-radius: var(--border-radius-sm);
     cursor: pointer;
-    font-size: 0.9em;
+    font-size: 14px;
     font-weight: 500;
-    transition: background-color 0.2s ease-in-out;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
-#new-email-btn:hover {
-    background-color: var(--action-button-hover-bg);
+
+.new-email-btn:hover {
+    background-color: var(--link-color-hover);
 }
+
+.new-email-btn svg {
+    flex-shrink: 0;
+}
+
+.new-email-btn span {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .new-email-btn span {
+        display: inline;
+    }
+}
+
+
 
 /* === Layout: Main Container === */
 .main-container {
@@ -450,36 +532,16 @@ img {
 
 
 /* Unread email post indication */
+.post-card.email-unread {
+    background-color: #f8f9ff;
+    border-left: 3px solid var(--link-color);
+    padding-left: 13px;
+}
+
 .post-card.email-unread .post-author-line .author-name,
 .post-card.email-unread .post-content-subject {
-    /* font-weight: 700; /* Bolder for unread */
-    /* color: var(--link-color); Could make unread prominent with link color */
-}
-.post-card.email-unread {
-    /* Add a subtle left border or slightly different background for unread posts */
-     /* border-left: 3px solid var(--link-color);
-     padding-left: 13px; /* Adjust if using border-left */
-}
-/* You might want a visual indicator like a blue dot for unread */
-.post-card.email-unread .post-author-meta::before {
-    /* content: '●';
-    color: var(--link-color);
-    font-size: 10px;
-    margin-right: 6px;
-    position: absolute;
-    left: 2px; top: 16px; /* Adjust positioning */
-}
-
-
-/* Hide original .thread-participants and .thread-last-reply if not fitting the new design */
-.thread-participants,
-.thread-last-reply {
-    display: none;
-}
-
-/* Adjust .group-indicator if it's still used within .thread-subject or elsewhere */
-.group-indicator {
-    /* Styles from previous iteration, review if needed */
+    font-weight: 700;
+    color: var(--text-color-primary);
 }
 
 /* === General UI Elements: Buttons === */
