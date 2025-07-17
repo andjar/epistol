@@ -88,12 +88,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         feedContainer.innerHTML = '<p>Loading feed...</p>';
 
         try {
-            const response = await api.getFeed(personId);
+            // Use alice_k's user ID (first user created in test data) - same as app.js
+            const currentUserId = 1;
+            
+            // Call getFeed with proper parameters to filter by personId
+            const response = await api.getFeed(currentUserId, { personId: personId });
 
             const threads = response.data ? response.data.threads : response.threads;
 
             if (!threads || threads.length === 0) {
-                feedContainer.innerHTML = `<p>No threads to display.</p>`;
+                feedContainer.innerHTML = `<p>No threads to display for this user.</p>`;
                 allThreads = [];
             } else {
                 allThreads = threads;
@@ -175,7 +179,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function filterThreadsByTimeline() {
-        if (!timelineRange.start || !timelineRange.end) return;
+        if (!timelineRange.start || !timelineRange.end || allThreads.length === 0) {
+            // If no timeline range or no threads, show all threads
+            displayFilteredThreads();
+            return;
+        }
 
         const timeDiff = timelineRange.end.getTime() - timelineRange.start.getTime();
         const currentTime = timelineRange.start.getTime() + (timeDiff * (1 - currentTimelinePosition));
@@ -201,8 +209,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
+        // Use alice_k's user ID (first user created in test data) - same as app.js
+        const currentUserId = 1;
+
         threads.forEach(thread => {
-            const threadElement = window.renderThread(thread, thread.subject, personId);
+            const threadElement = window.renderThread(thread, thread.subject, currentUserId);
             feedContainer.appendChild(threadElement);
         });
     }

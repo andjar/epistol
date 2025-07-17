@@ -7,9 +7,9 @@
  * @returns {string} HTML string for the email post.
  */
 window.renderEmailAsPost = function(email, threadSubject, currentUserId, isFirstInThread) {
-    const emailStatus = email.status || 'unread';
-    const statusClass = `email-${emailStatus}`;
-    const firstPostClass = isFirstInThread ? 'is-first-post' : 'is-reply-post';
+    const isUnread = email.read_receipts && !email.read_receipts.some(r => r.user_id === currentUserId && r.read_at);
+    const unreadClass = isUnread ? 'email-unread' : '';
+    const firstPostClass = isFirstInThread ? 'is-first-post' : 'is-reply-post'; // Differentiate first vs. replies
 
     // Format timestamp (simplified)
     const timestamp = new Date(email.timestamp).toLocaleString([], {
@@ -18,42 +18,38 @@ window.renderEmailAsPost = function(email, threadSubject, currentUserId, isFirst
     });
 
     // Simplified recipient display: For "Sender ▸ Recipient", show first recipient or "Group" if applicable
+    // This would need more logic if you have group names associated with emails or want to list multiple recipients.
     let recipientDisplay = email.recipients && email.recipients.length > 0 ? email.recipients[0].name : 'Recipients';
-    if (email.group_id && email.group_name) {
+    if (email.group_id && email.group_name) { // Assuming group_name is available if group_id is present
         recipientDisplay = email.group_name;
     } else if (email.recipients && email.recipients.length > 1) {
         recipientDisplay = `${email.recipients[0].name} + ${email.recipients.length - 1} more`;
     }
 
-    // Status labels and indicators
+    // User status for this email (placeholder logic)
+    // You'd fetch this from email.user_specific_status or similar
+    const userStatus = email.user_specific_statuses && email.user_specific_statuses.find(s => s.user_id === currentUserId)?.status || 'default';
     const statusLabels = {
         'read': 'Read',
         'unread': 'Unread',
         'follow-up': 'Follow-up',
         'important-info': 'Important',
-        'sent': 'Sent',
-        'default': 'Set Status'
+        'default': 'Set Status' // Default if no status or unknown
     };
-    const currentStatusLabel = statusLabels[emailStatus] || 'Set Status';
+    const currentStatusLabel = statusLabels[userStatus] || 'Set Status';
 
     // Create a string for all recipients for "Reply All"
+    // This needs to be more robust in a real app (e.g., include CCs, filter out current user)
     const allRecipientsForReplyAll = [email.sender_email, ...(email.recipients || []).map(r => r.email)].join(',');
 
-    // Status indicator based on email status
-    const statusIndicator = `<span class="mail-status-indicator ${emailStatus}"></span>`;
-
     return `
-        <div class="post-card ${statusClass} ${firstPostClass}" data-email-id="${email.email_id}">
+        <div class="post-card ${unreadClass} ${firstPostClass}" data-email-id="${email.email_id}">
             <div class="post-header">
                 <div class="post-avatar">
-                    ${email.sender_avatar_url ? 
-                        `<img src="${email.sender_avatar_url}" alt="${email.sender_name}" />` : 
-                        `<span>${email.sender_name ? email.sender_name.charAt(0).toUpperCase() : 'S'}</span>`
-                    }
+                    <span>${email.sender_name ? email.sender_name.charAt(0).toUpperCase() : 'S'}</span>
                 </div>
                 <div class="post-author-meta">
                     <div class="post-author-line">
-                        ${statusIndicator}
                         <a href="#" class="author-name" data-person-id="${email.sender_person_id || ''}">${email.sender_name || 'Unknown Sender'}</a>
                         <span class="recipient-separator">▸</span>
                         <span class="recipient-name">${recipientDisplay}</span>
@@ -64,47 +60,35 @@ window.renderEmailAsPost = function(email, threadSubject, currentUserId, isFirst
                     <button class="options-btn" aria-label="More options">
                         <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path></svg>
                     </button>
+                    <!-- Dropdown for status can go here or be integrated with post-actions -->
                 </div>
             </div>
 
             <div class="post-content">
                 ${isFirstInThread && threadSubject ? `<h4 class="post-content-subject">${threadSubject}</h4>` : ''}
-                ${email.body_html || `<p>${email.body_preview || email.body_text || 'No content'}</p>`}
+                ${email.body_html || `<p>${email.body_preview || 'No content'}</p>`}
             </div>
 
             <div class="post-footer">
                 <div class="post-actions">
                     <button class="action-btn reply-to-email-btn" data-email-id="${email.email_id}" data-subject="${email.subject_for_reply || threadSubject}" data-sender="${email.sender_email}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                        </svg>
                         <span>Reply</span>
                     </button>
                     <button class="action-btn reply-all-to-email-btn" data-email-id="${email.email_id}" data-subject="${email.subject_for_reply || threadSubject}" data-sender="${email.sender_email}" data-all-recipients="${allRecipientsForReplyAll}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                            <path d="M13 8H7l4-4"></path>
-                            <path d="M13 16H7l4 4"></path>
-                        </svg>
                         <span>Reply All</span>
                     </button>
                     <button class="action-btn forward-email-btn" data-email-id="${email.email_id}" data-subject="${email.subject_for_reply || threadSubject}" data-original-sender="${email.sender_name}" data-original-date="${timestamp}" data-original-body="${email.body_preview || email.body_html}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M9 17l3 3 3-3"></path>
-                            <path d="M12 12l9-9"></path>
-                            <path d="M15 3h6v6"></path>
-                        </svg>
                         <span>Forward</span>
                     </button>
                 </div>
                 <div class="post-status-selector-container email-status-container">
-                     <span class="current-post-status" style="display:none;">Status: ${emailStatus}</span>
+                     <span class="current-post-status" style="display:none;">Status: ${userStatus}</span> <!-- Hidden, for app.js logic if needed -->
                      <select class="post-status-select minimalist-select" data-email-id="${email.email_id}">
-                        <option value="" ${emailStatus === 'default' ? 'selected' : ''} disabled>${currentStatusLabel}</option>
-                        <option value="read" ${emailStatus === 'read' ? 'selected' : ''}>Read</option>
-                        <option value="unread" ${emailStatus === 'unread' ? 'selected' : ''}>Unread</option>
-                        <option value="follow-up" ${emailStatus === 'follow-up' ? 'selected' : ''}>Follow-up</option>
-                        <option value="important-info" ${emailStatus === 'important-info' ? 'selected' : ''}>Important</option>
+                        <option value="" ${userStatus === 'default' ? 'selected' : ''} disabled>${currentStatusLabel}</option>
+                        <option value="read" ${userStatus === 'read' ? 'selected' : ''}>Read</option>
+                        <option value="unread" ${userStatus === 'unread' ? 'selected' : ''}>Unread</option>
+                        <option value="follow-up" ${userStatus === 'follow-up' ? 'selected' : ''}>Follow-up</option>
+                        <option value="important-info" ${userStatus === 'important-info' ? 'selected' : ''}>Important</option>
                      </select>
                 </div>
             </div>
@@ -124,80 +108,15 @@ window.renderThread = function(threadData, threadSubject, currentUserId) {
     threadContainer.className = 'thread';
     threadContainer.dataset.threadId = threadData.thread_id;
 
-    // Calculate unread count
-    const unreadCount = threadData.emails ? threadData.emails.filter(email => email.status === 'unread').length : 0;
-    
-    // Thread header for collapsible functionality
-    const threadHeader = document.createElement('div');
-    threadHeader.className = 'thread-header';
-    
-    const threadToggle = document.createElement('button');
-    threadToggle.className = 'thread-toggle';
-    threadToggle.innerHTML = '▶';
-    threadToggle.setAttribute('aria-label', 'Toggle thread');
-    
-    const threadInfo = document.createElement('div');
-    threadInfo.className = 'thread-info';
-    
-    const threadSubjectEl = document.createElement('div');
-    threadSubjectEl.className = 'thread-subject';
-    threadSubjectEl.textContent = threadSubject;
-    
-    const threadMeta = document.createElement('div');
-    threadMeta.className = 'thread-meta';
-    
-    // Participants
-    const participantsEl = document.createElement('div');
-    participantsEl.className = 'thread-participants';
-    
-    if (threadData.participants && threadData.participants.length > 0) {
-        threadData.participants.slice(0, 3).forEach(participant => {
-            const avatar = document.createElement('div');
-            avatar.className = 'participant-avatar';
-            if (participant.avatar_url) {
-                avatar.innerHTML = `<img src="${participant.avatar_url}" alt="${participant.name}" />`;
-            } else {
-                avatar.textContent = participant.name ? participant.name.charAt(0).toUpperCase() : 'U';
-            }
-            participantsEl.appendChild(avatar);
-        });
-        
-        if (threadData.participants.length > 3) {
-            const moreCount = document.createElement('span');
-            moreCount.textContent = `+${threadData.participants.length - 3}`;
-            participantsEl.appendChild(moreCount);
-        }
-    }
-    
-    // Last activity time
-    const lastActivityEl = document.createElement('span');
-    lastActivityEl.className = 'thread-last-activity';
-    lastActivityEl.textContent = formatRelativeTime(threadData.last_reply_time);
-    
-    threadMeta.appendChild(participantsEl);
-    threadMeta.appendChild(lastActivityEl);
-    
-    threadInfo.appendChild(threadSubjectEl);
-    threadInfo.appendChild(threadMeta);
-    
-    const threadActions = document.createElement('div');
-    threadActions.className = 'thread-actions';
-    
-    // Unread count badge
-    if (unreadCount > 0) {
-        const unreadBadge = document.createElement('span');
-        unreadBadge.className = 'thread-unread-count';
-        unreadBadge.textContent = unreadCount;
-        threadActions.appendChild(unreadBadge);
-    }
-    
-    threadHeader.appendChild(threadToggle);
-    threadHeader.appendChild(threadInfo);
-    threadHeader.appendChild(threadActions);
-    
-    // Thread posts container
+    // Optional: A very muted title for the overall thread, if desired *above* all posts.
+    // If the subject is prominent in the first post, this might be redundant.
+    // const threadTitleEl = document.createElement('h3');
+    // threadTitleEl.className = 'thread-overall-title';
+    // threadTitleEl.textContent = threadSubject;
+    // threadContainer.appendChild(threadTitleEl);
+
     const postsContainer = document.createElement('div');
-    postsContainer.className = 'thread-posts collapsed';
+    postsContainer.className = 'posts-container';
 
     if (threadData.emails && threadData.emails.length > 0) {
         threadData.emails.forEach((email, index) => {
@@ -209,24 +128,7 @@ window.renderThread = function(threadData, threadSubject, currentUserId) {
         postsContainer.innerHTML = '<p class="no-emails-in-thread">No messages in this conversation.</p>';
     }
 
-    threadContainer.appendChild(threadHeader);
     threadContainer.appendChild(postsContainer);
-    
-    // Add click handler for thread toggle
-    threadHeader.addEventListener('click', () => {
-        const isExpanded = !postsContainer.classList.contains('collapsed');
-        
-        if (isExpanded) {
-            postsContainer.classList.add('collapsed');
-            threadToggle.innerHTML = '▶';
-            threadToggle.classList.remove('expanded');
-        } else {
-            postsContainer.classList.remove('collapsed');
-            threadToggle.innerHTML = '▼';
-            threadToggle.classList.add('expanded');
-        }
-    });
-    
     return threadContainer;
 };
 
@@ -287,11 +189,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function filterFeedByTimeline(position) {
+        // Get all threads
         const allThreads = Array.from(feedContainer.querySelectorAll('.thread'));
-        const visibleCount = Math.round(allThreads.length * (1 - position));
-
-        allThreads.forEach((thread, index) => {
-            thread.style.display = index < visibleCount ? 'block' : 'none';
+        
+        if (allThreads.length === 0) return;
+        
+        // Get thread dates for filtering
+        const threadDates = allThreads.map(thread => {
+            const threadId = thread.dataset.threadId;
+            // Try to find the timestamp in the thread's post timestamps
+            const timeElements = thread.querySelectorAll('.post-timestamp');
+            if (timeElements.length > 0) {
+                // Use the first timestamp we find
+                const timeText = timeElements[0].textContent;
+                // Parse the timestamp - this is a simplified approach
+                const date = new Date(timeText);
+                return { thread, date: date.getTime() };
+            }
+            // Fallback to current date if no timestamp found
+            return { thread, date: Date.now() };
+        });
+        
+        // Sort by date (newest first)
+        threadDates.sort((a, b) => b.date - a.date);
+        
+        // Calculate how many threads to show based on position
+        // position 0 = oldest only, position 1 = all threads
+        const visibleCount = Math.max(1, Math.round(threadDates.length * (1 - position)));
+        
+        // Show/hide threads
+        threadDates.forEach((item, index) => {
+            item.thread.style.display = index < visibleCount ? 'block' : 'none';
         });
     }
 });
