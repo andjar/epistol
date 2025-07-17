@@ -323,6 +323,8 @@ img {
 }
 
 #feed-container {
+    max-width: 800px;
+    margin: 0 auto;
     /* No specific background needed if #main-content has it */
 }
 
@@ -536,6 +538,18 @@ img {
     background-color: #f8f9ff;
     border-left: 3px solid var(--link-color);
     padding-left: 13px;
+    position: relative;
+}
+
+.post-card.email-unread::before {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 5px;
+    width: 8px;
+    height: 8px;
+    background-color: var(--link-color);
+    border-radius: 50%;
 }
 
 .post-card.email-unread .post-author-line .author-name,

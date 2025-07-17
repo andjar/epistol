@@ -69,13 +69,13 @@ if ($data === null && json_last_error() !== JSON_ERROR_NONE && empty($GLOBALS['m
 }
 
 // Validate input parameters
-$post_id = $data['post_id'] ?? null;
+$email_id = $data['email_id'] ?? null;
 $user_id = $data['user_id'] ?? null; // Assuming user_id is integer as per validation
 $status = $data['status'] ?? null;
 
 $allowed_statuses = ['read', 'follow-up', 'important-info', 'unread'];
 
-if (empty($post_id) || !is_numeric($post_id)) {
+if (empty($email_id) || !is_numeric($email_id)) {
     send_json_error('email_id is required and must be a number.', 400);
 }
 
@@ -94,7 +94,7 @@ try {
     // Check if a status already exists for this email_id and user_id
     // Assuming email_statuses table has 'id' as PK, 'email_id', 'user_id', 'status', 'created_at', 'updated_at'
     $stmt_check = $pdo->prepare("SELECT id FROM email_statuses WHERE email_id = :email_id AND user_id = :user_id");
-    $stmt_check->bindParam(':email_id', $post_id, PDO::PARAM_INT);
+    $stmt_check->bindParam(':email_id', $email_id, PDO::PARAM_INT);
     $stmt_check->bindParam(':user_id', $user_id, PDO::PARAM_INT);
     $stmt_check->execute();
     $existing_status = $stmt_check->fetch(PDO::FETCH_ASSOC);
@@ -114,7 +114,7 @@ try {
     } else {
         // Insert new status
         $stmt_insert = $pdo->prepare("INSERT INTO email_statuses (email_id, user_id, status, created_at, updated_at) VALUES (:email_id, :user_id, :status, :created_at, :updated_at)");
-        $stmt_insert->bindParam(':email_id', $post_id, PDO::PARAM_INT);
+        $stmt_insert->bindParam(':email_id', $email_id, PDO::PARAM_INT);
         $stmt_insert->bindParam(':user_id', $user_id, PDO::PARAM_INT);
         $stmt_insert->bindParam(':status', $status, PDO::PARAM_STR);
         $current_time = date('Y-m-d H:i:s');
