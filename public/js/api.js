@@ -19,6 +19,9 @@ async getFeed(userId, params = {}) {
     if (params.groupId) {
         url += `&group_id=${encodeURIComponent(params.groupId)}`;
     }
+    if (params.status) {
+        url += `&status=${encodeURIComponent(params.status)}`;
+    }
     if (params.personId) {
         url += `&person_id=${encodeURIComponent(params.personId)}`;
     }

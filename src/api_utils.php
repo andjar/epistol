@@ -30,5 +30,4 @@ function send_json_error($message, $status_code = 400) {
         'message' => $message
     ]);
     exit;
-}
-?> 
+} 

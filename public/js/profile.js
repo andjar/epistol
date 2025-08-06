@@ -218,3 +218,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
+
+// Sidebar toggling functions for profile page
+function toggleLeftSidebar() {
+    const leftSidebar = document.getElementById('left-sidebar');
+    if (leftSidebar) {
+        leftSidebar.classList.toggle('collapsed');
+    }
+}
+
+function toggleRightSidebar() {
+    const rightSidebar = document.getElementById('right-sidebar');
+    if (rightSidebar) {
+        rightSidebar.classList.toggle('collapsed');
+    }
+}
+
+// Navigation functions for profile page
+function showNotifications() {
+    alert('Notifications feature coming soon!');
+}
+
+function showGroups() {
+    alert('Groups feature coming soon!');
+}
+
+function showCurrentUserProfile() {
+    window.location.href = 'profile.php?id=1'; // Assuming current user ID is 1
+}
+
+function showComposeModal() {
+    alert('Compose modal coming soon!');
+}

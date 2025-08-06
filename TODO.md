@@ -132,6 +132,82 @@ New tasks that have emerged during development:
 
 ---
 
+### Milestone 6: Frontend UI/UX Improvements (Current Focus)
+
+Based on user feedback, the following improvements are needed for a better user experience:
+
+#### Mail Thread Styling & Feed Experience
+-   [ ] **Minimalistic Facebook-like Feed Design:**
+    -   [ ] Remove blue borders on unread emails and replace with subtle indicators
+    -   [ ] Implement cleaner card-based design with better spacing
+    -   [ ] Add smooth hover effects and transitions
+    -   [ ] Improve typography and visual hierarchy
+    -   [ ] Make threads more compact and feed-like
+    -   [ ] Add better visual separation between threads
+
+#### Filtering System Fixes
+-   [ ] **Fix Group Filtering:**
+    -   [ ] Ensure groups are properly loaded in left sidebar
+    -   [ ] Fix group filter dropdown functionality
+    -   [ ] Add proper group management UI
+-   [ ] **Fix Status Filtering:**
+    -   [ ] Implement proper read/unread status filtering
+    -   [ ] Fix important/follow-up status filtering
+    -   [ ] Add visual indicators for different statuses
+-   [ ] **Fix Right Sidebar Filters:**
+    -   [ ] Ensure all advanced filters work properly
+    -   [ ] Fix date range filtering
+    -   [ ] Fix attachment filtering
+    -   [ ] Fix sender/recipient filtering
+
+#### Groups Management
+-   [ ] **Groups Display & Management:**
+    -   [ ] Ensure groups are visible in left sidebar
+    -   [ ] Add group editing functionality
+    -   [ ] Add group member management
+    -   [ ] Implement group creation and deletion
+    -   [ ] Add group-specific filtering
+
+#### Profile Management
+-   [ ] **Profile Editing:**
+    -   [ ] Add profile edit buttons/triggers
+    -   [ ] Implement profile editing modal
+    -   [ ] Add profile picture upload functionality
+    -   [ ] Add email address management
+    -   [ ] Add profile information editing
+
+#### Default Feed Behavior
+-   [ ] **Unread Email Focus:**
+    -   [ ] Change default feed to show only unread emails
+    -   [ ] Remove distracting blue borders
+    -   [ ] Add subtle unread indicators instead
+    -   [ ] Implement "mark as read" functionality
+    -   [ ] Add unread count badges
+
+#### Timeline Enhancement
+-   [ ] **Google Photos-style Timeline:**
+    -   [ ] Improve timeline dot positioning
+    -   [ ] Make hover date follow the blue dot
+    -   [ ] Add smooth timeline scrolling
+    -   [ ] Implement better date navigation
+    -   [ ] Add timeline zoom functionality
+
+#### Additional UI Improvements
+-   [ ] **Responsive Design:**
+    -   [ ] Improve mobile layout
+    -   [ ] Add better tablet support
+    -   [ ] Implement collapsible sidebars
+-   [ ] **Performance:**
+    -   [ ] Optimize feed loading
+    -   [ ] Add infinite scrolling
+    -   [ ] Implement lazy loading for images
+-   [ ] **Accessibility:**
+    -   [ ] Add proper ARIA labels
+    -   [ ] Improve keyboard navigation
+    -   [ ] Add screen reader support
+
+---
+
 ### Future Ideas (Post-MVP)
 
 -   [ ] Full-text search using SQLite's FTS5 extension.

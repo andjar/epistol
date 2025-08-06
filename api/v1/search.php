@@ -21,7 +21,7 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../src/db.php';
 
 try {
-    $db = new Database();
+    $db = get_db_connection();
     
     // Get search parameters
     $query = $_GET['q'] ?? $_POST['q'] ?? '';
@@ -100,29 +100,17 @@ try {
  * Search in emails with enhanced filtering
  */
 function searchEmails($db, $searchTerm, $limit, $offset, $dateFrom = null, $dateTo = null, $senderFilter = null, $recipientFilter = null, $hasAttachments = null, $sentByMe = null, $receivedByMe = null) {
-    $sql = "SELECT DISTINCT 
+    $sql = "SELECT 
                 e.id,
                 e.subject,
                 e.body_text,
                 e.body_html,
                 e.created_at,
-                e.thread_id,
-                t.subject as thread_subject,
-                p.name as sender_name,
-                ea.email_address as sender_email,
-                u.id as sender_user_id,
-                (SELECT COUNT(*) FROM attachments WHERE email_id = e.id) as attachment_count
+                e.thread_id
             FROM emails e
-            LEFT JOIN threads t ON e.thread_id = t.id
-            LEFT JOIN users u ON e.user_id = u.id
-            LEFT JOIN persons p ON u.person_id = p.id
-            LEFT JOIN email_addresses ea ON p.id = ea.person_id AND ea.is_primary = 1
-            LEFT JOIN email_recipients er ON e.id = er.email_id
-            LEFT JOIN email_addresses recipient_ea ON er.email_address_id = recipient_ea.id
-            LEFT JOIN persons recipient_p ON recipient_ea.person_id = recipient_p.id
-            WHERE (e.subject LIKE ? OR e.body_text LIKE ? OR p.name LIKE ? OR ea.email_address LIKE ?)";
+            WHERE (e.subject LIKE ? OR e.body_text LIKE ?)";
     
-    $params = [$searchTerm, $searchTerm, $searchTerm, $searchTerm];
+    $params = [$searchTerm, $searchTerm];
     
     // Date range filtering
     if ($dateFrom) {
@@ -141,10 +129,9 @@ function searchEmails($db, $searchTerm, $limit, $offset, $dateFrom = null, $date
         $params[] = '%' . $senderFilter . '%';
     }
     
-    // Recipient filtering
+    // Recipient filtering - simplified for now
     if ($recipientFilter) {
-        $sql .= " AND (recipient_p.name LIKE ? OR recipient_ea.email_address LIKE ?)";
-        $params[] = '%' . $recipientFilter . '%';
+        $sql .= " AND EXISTS (SELECT 1 FROM email_recipients er2 JOIN email_addresses ea2 ON er2.email_address_id = ea2.id WHERE er2.email_id = e.id AND ea2.email_address LIKE ?)";
         $params[] = '%' . $recipientFilter . '%';
     }
     
@@ -167,11 +154,10 @@ function searchEmails($db, $searchTerm, $limit, $offset, $dateFrom = null, $date
         $sql .= " AND EXISTS (SELECT 1 FROM email_recipients er2 JOIN email_addresses ea2 ON er2.email_address_id = ea2.id WHERE er2.email_id = e.id AND ea2.person_id = 1)";
     }
     
-    $sql .= " ORDER BY e.created_at DESC LIMIT ? OFFSET ?";
-    $params[] = $limit;
-    $params[] = $offset;
+    $sql .= " ORDER BY e.created_at DESC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
     
-    $stmt = $db->query($sql, $params);
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
@@ -204,11 +190,10 @@ function searchThreads($db, $searchTerm, $limit, $offset, $dateFrom = null, $dat
         $params[] = $dateTo . ' 23:59:59';
     }
     
-    $sql .= " GROUP BY t.id ORDER BY t.last_activity_at DESC LIMIT ? OFFSET ?";
-    $params[] = $limit;
-    $params[] = $offset;
+    $sql .= " GROUP BY t.id ORDER BY t.last_activity_at DESC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
     
-    $stmt = $db->query($sql, $params);
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
@@ -229,9 +214,9 @@ function searchPersons($db, $searchTerm, $limit, $offset) {
             WHERE p.name LIKE ? OR ea.email_address LIKE ?
             GROUP BY p.id
             ORDER BY p.name ASC
-            LIMIT ? OFFSET ?";
-    
-    $stmt = $db->query($sql, [$searchTerm, $searchTerm, $limit, $offset]);
+            LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+    $stmt = $db->prepare($sql);
+    $stmt->execute([$searchTerm, $searchTerm]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 

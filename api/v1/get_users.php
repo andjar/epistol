@@ -23,11 +23,13 @@ try {
             SELECT DISTINCT 
                 p.id,
                 p.name,
-                p.email,
+                ea.email_address as email,
                 COUNT(e.id) as email_count
             FROM persons p
-            INNER JOIN emails e ON p.id = e.sender_person_id
-            GROUP BY p.id, p.name, p.email
+            INNER JOIN email_addresses ea ON p.id = ea.person_id
+            INNER JOIN users u ON p.id = u.person_id
+            INNER JOIN emails e ON u.id = e.user_id
+            GROUP BY p.id, p.name, ea.email_address
             ORDER BY email_count DESC, p.name ASC
             LIMIT 50
         ");
@@ -38,11 +40,12 @@ try {
             SELECT DISTINCT 
                 p.id,
                 p.name,
-                p.email,
+                ea.email_address as email,
                 COUNT(er.email_id) as email_count
             FROM persons p
-            INNER JOIN email_recipients er ON p.id = er.recipient_person_id
-            GROUP BY p.id, p.name, p.email
+            INNER JOIN email_addresses ea ON p.id = ea.person_id
+            INNER JOIN email_recipients er ON p.id = er.person_id
+            GROUP BY p.id, p.name, ea.email_address
             ORDER BY email_count DESC, p.name ASC
             LIMIT 50
         ");
@@ -53,19 +56,21 @@ try {
             SELECT 
                 p.id,
                 p.name,
-                p.email,
+                ea.email_address as email,
                 COALESCE(sent_count, 0) + COALESCE(received_count, 0) as total_emails
             FROM persons p
+            INNER JOIN email_addresses ea ON p.id = ea.person_id
             LEFT JOIN (
-                SELECT sender_person_id, COUNT(*) as sent_count
-                FROM emails
-                GROUP BY sender_person_id
-            ) sent ON p.id = sent.sender_person_id
+                SELECT u.person_id, COUNT(*) as sent_count
+                FROM emails e
+                INNER JOIN users u ON e.user_id = u.id
+                GROUP BY u.person_id
+            ) sent ON p.id = sent.person_id
             LEFT JOIN (
-                SELECT recipient_person_id, COUNT(*) as received_count
-                FROM email_recipients
-                GROUP BY recipient_person_id
-            ) received ON p.id = received.recipient_person_id
+                SELECT er.person_id, COUNT(*) as received_count
+                FROM email_recipients er
+                GROUP BY er.person_id
+            ) received ON p.id = received.person_id
             ORDER BY total_emails DESC, p.name ASC
             LIMIT 50
         ");

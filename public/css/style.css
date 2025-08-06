@@ -24,6 +24,15 @@
     --border-radius-lg: 12px; /* For larger elements if needed */
     --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
     --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+    
+    /* Additional variables for modals and forms */
+    --border-color: #DADDE1;
+    --input-bg: #FFFFFF;
+    --hover-bg: rgba(0,0,0,0.05);
+    --primary-color: #007AFF;
+    --secondary-bg: #F8F9FA;
+    --success-color: #10B981;
+    --danger-color: #EF4444;
 }
 
 /* === Global Reset & Base Styles === */
@@ -276,12 +285,19 @@ img {
     padding: 15px; /* Reduced padding for tighter feed */
     height: calc(100vh - 60px); 
     overflow-y: auto;
+    display: flex;
+    justify-content: center; /* Center the feed */
 }
 
+/* === Timeline Styling (Google Photos inspired) === */
 #timeline-container {
+    position: fixed;
+    right: 320px; /* Position to the right of the feed, not overlapping sidebar */
+    top: 50%;
+    transform: translateY(-50%);
     width: 20px;
-    height: calc(100vh - 60px);
-    position: relative;
+    height: 300px;
+    z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -290,7 +306,7 @@ img {
 
 #timeline-bar {
     width: 4px;
-    height: 90%;
+    height: 100%;
     background-color: #e0e0e0;
     border-radius: 2px;
     position: relative;
@@ -307,313 +323,309 @@ img {
     transform: translate(-50%, -50%);
     cursor: ns-resize;
     z-index: 10;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-.timeline-date {
+#timeline-handle:hover {
+    transform: translate(-50%, -50%) scale(1.2);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+#timeline-handle:active {
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+/* Timeline date tooltip */
+#timeline-date {
     position: absolute;
-    top: 50%;
-    left: 100%;
-    transform: translateY(-50%);
-    background-color: var(--link-color);
+    right: 30px;
+    background-color: rgba(0, 0, 0, 0.8);
     color: white;
-    padding: 5px 10px;
-    border-radius: 5px;
-    white-space: nowrap;
+    padding: 8px 12px;
+    border-radius: 6px;
     font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+#timeline-handle:hover + #timeline-date,
+#timeline-date:hover {
+    opacity: 1;
+}
+
+/* Timeline dots for different dates */
+.timeline-dot {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background-color: var(--link-color);
+    border-radius: 50%;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.timeline-dot:hover {
+    transform: translateX(-50%) scale(1.5);
+    background-color: var(--link-color-hover);
 }
 
 #feed-container {
-    max-width: 800px;
+    max-width: 800px; /* Increased max-width for better centering */
+    width: 100%;
     margin: 0 auto;
     /* No specific background needed if #main-content has it */
 }
 
-/* === Email Thread/Card Styling (Social Media Post Inspired) === */
+/* === Email Thread/Card Styling (Reverted to Original Design) === */
 
 /* The .thread element is the main container for a conversation/feed item. */
 .thread {
     background-color: var(--card-bg);
     border: 1px solid var(--card-border-color);
     border-radius: var(--border-radius-md);
-    margin-bottom: 12px; /* Space between threads */
+    margin-bottom: 12px; /* Restored original spacing */
     box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+    overflow: hidden; /* Ensure clean edges */
 }
 .thread:hover {
     box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
 }
 
 /* The subject of the thread, acts as a title for the grouped posts. */
 .thread-overall-title { /* Optional title for the whole thread, if used */
-    font-size: 0.8em;
-    font-weight: 500;
-    color: var(--text-color-tertiary);
-    padding: 8px 12px 0;
-    margin-bottom: 0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: 1em;
+    font-weight: 600;
+    color: var(--text-primary);
+    padding: 12px 16px 8px; /* Restored original padding */
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-subtle);
 }
 
-/* Container for individual email "posts" within a thread. */
+/* Container for all posts within a thread */
 .posts-container {
-    margin-top: 0;
-    padding-left: 0;
-    border-left: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0; /* No gap between posts in a thread */
 }
 
-/* Individual email message - This is styled as a "post". */
+/* Individual post cards within a thread */
 .post-card {
-    padding: 12px 16px;
-    transition: background-color 0.2s ease;
-}
-.post-card:not(:last-child) {
-    border-bottom: 1px solid var(--post-separator-color);
+    background-color: var(--card-bg);
+    border: none;
+    border-radius: 0;
+    padding: 12px 16px; /* Restored original padding */
+    margin: 0;
+    transition: all 0.2s ease;
+    position: relative;
 }
 
-/* First post in thread - original email */
+.post-card:hover {
+    background-color: var(--bg-hover);
+}
+
+/* First post in a thread gets special styling */
 .post-card.is-first-post {
+    border-bottom: 1px solid var(--border-color);
     background-color: var(--card-bg);
-    border-left: 4px solid var(--link-color); /* Changed from --primary-color to --link-color */
     font-weight: 500;
 }
 
-/* Reply posts - indented and styled as children */
+/* Reply posts get indented styling - Facebook comment style */
 .post-card.is-reply-post {
-    background-color: rgba(0, 0, 0, 0.03);
-    margin-left: 24px;
-    border-left: 3px solid #e1e5e9;
-    position: relative;
-    border-radius: 0 8px 8px 0;
-    margin-top: 8px;
-    margin-bottom: 8px;
+    margin-left: 40px; /* Increased indent for replies */
+    border-left: 3px solid var(--border-color);
+    background-color: var(--bg-subtle);
+    font-size: 0.9em; /* Smaller text for replies */
+    padding: 8px 12px; /* Smaller padding for replies */
+    margin-top: 4px;
+    margin-bottom: 4px;
+    border-radius: 0 8px 8px 0; /* Rounded right corners only */
 }
 
-/* Add a subtle connector line for replies */
-.post-card.is-reply-post::before {
-    content: '';
-    position: absolute;
-    left: -24px;
-    top: 24px;
-    width: 21px;
-    height: 2px;
-    background-color: #e1e5e9;
+.post-card.is-reply-post:hover {
+    border-left-color: var(--primary-color);
+    background-color: var(--bg-hover);
 }
 
-/* Nested replies get more indentation */
-.post-card.is-reply-post .post-card.is-reply-post {
-    margin-left: 32px;
-    background-color: rgba(0, 0, 0, 0.02);
-    border-left-color: #d1d5d9;
+/* Unread email styling - subtle indicator */
+.email-unread {
+    background-color: var(--bg-subtle);
+    border-left: 3px solid var(--primary-color);
 }
 
-/* Reply indicator */
-.post-card.is-reply-post .post-header::after {
-    content: '↳';
-    position: absolute;
-    left: -30px;
-    top: 12px;
-    color: #6c757d;
-    font-size: 14px;
-    font-weight: bold;
-    background-color: #f8f9fa;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #e1e5e9;
+.email-unread:hover {
+    background-color: var(--bg-hover);
 }
 
-/* Header of an individual email "post" */
+/* Post header with avatar, author info, and timestamp */
 .post-header {
     display: flex;
-    align-items: flex-start; /* Align avatar top, text next to it */
-    margin-bottom: 8px;
-    position: relative;
+    align-items: flex-start;
+    gap: 12px; /* Restored original gap */
+    margin-bottom: 8px; /* Restored original margin */
 }
 
+/* Avatar styling */
 .post-avatar {
-    width: 40px;
+    width: 40px; /* Restored original size */
     height: 40px;
     border-radius: 50%;
-    background-color: #CED0D4; /* Placeholder */
+    background-color: var(--primary-color);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
-    font-weight: 500;
-    margin-right: 10px;
+    font-weight: 600;
+    font-size: 1em; /* Restored original font size */
     flex-shrink: 0;
 }
 
-.post-avatar img {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
+/* Author meta information */
 .post-author-meta {
-    flex-grow: 1;
+    flex: 1;
+    min-width: 0; /* Allow text to wrap */
 }
 
 .post-author-line {
-    font-size: 0.9em; /* 13-14px approx */
-    line-height: 1.35;
-    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Restored original gap */
+    margin-bottom: 4px; /* Restored original margin */
 }
-.post-author-line .author-name {
+
+.author-name {
     font-weight: 600;
-    color: var(--text-color-primary);
+    color: var(--text-primary);
     text-decoration: none;
+    font-size: 1em; /* Restored original font size */
 }
-.post-author-line .author-name:hover {
+
+.author-name:hover {
+    color: var(--link-color);
     text-decoration: underline;
 }
-.post-author-line .recipient-separator,
-.post-author-line .recipient-name {
-    color: var(--text-color-secondary);
-    font-weight: normal;
-}
+
+/* Timestamp styling */
 .post-timestamp {
-    font-size: 0.75em; /* 11-12px approx */
-    color: var(--text-color-secondary);
-    line-height: 1.2;
+    font-size: 0.85em; /* Restored original size */
+    color: var(--text-muted);
+    margin-top: 2px; /* Restored original margin */
 }
+
+/* Options menu (three dots) */
 .post-options-menu {
-    margin-left: auto; /* Pushes options to the right */
+    margin-left: auto;
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
+
+.post-card:hover .post-options-menu {
+    opacity: 1;
+}
+
 .options-btn {
     background: none;
     border: none;
-    color: var(--text-color-secondary);
-    padding: 4px;
+    color: var(--text-muted);
     cursor: pointer;
-    border-radius: 50%;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
 }
+
 .options-btn:hover {
-    background-color: var(--action-button-hover-bg);
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
 }
-.options-btn svg { display: block; }
 
-
-/* Post Content */
+/* Post content area */
 .post-content {
-    font-size: 0.95em; /* 14-15px approx */
-    line-height: 1.5;
-    color: var(--text-color-primary);
-    padding: 4px 0 12px 0; /* Remove left padding if avatar handles it */
-    word-wrap: break-word;
-}
-.post-content-subject { /* Subject for the first post, if included in content */
-    font-size: 1.1em;
-    font-weight: 600;
-    margin-bottom: 0.5em;
-    color: var(--text-color-primary);
-}
-.post-content p {
-    margin-top: 0;
-    margin-bottom: 0.75em;
-}
-.post-content p:last-child {
-    margin-bottom: 0;
+    margin-left: 52px; /* Align with author name, not avatar */
+    margin-bottom: 12px; /* Restored original margin */
 }
 
-/* Post Footer (Actions & Status) */
+.post-content-subject {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px; /* Restored original margin */
+    font-size: 1em; /* Restored original font size */
+}
+
+.post-content p {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    font-size: 0.95em; /* Restored original font size */
+}
+
+/* Post footer with actions and status */
 .post-footer {
+    margin-left: 52px; /* Align with content */
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 8px;
-    margin-top: 8px;
-    border-top: 1px solid var(--post-separator-color);
+    gap: 12px; /* Restored original gap */
+    margin-top: 8px; /* Restored original margin */
 }
+
+/* Action buttons */
 .post-actions {
     display: flex;
-    gap: 8px; /* Gap between action buttons */
+    gap: 8px; /* Restored original gap */
 }
-.post-actions .action-btn {
+
+.action-btn {
     background: none;
-    border: none;
-    color: var(--action-button-color);
-    font-weight: 600;
-    font-size: 0.85em; /* ~13px */
-    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 6px 12px; /* Restored original padding */
     border-radius: var(--border-radius-sm);
     cursor: pointer;
-    transition: background-color 0.15s ease;
-    display: flex; /* For icon + text */
-    align-items: center;
-    gap: 4px;
-}
-.post-actions .action-btn:hover {
-    background-color: var(--action-button-hover-bg);
-    color: var(--text-color-primary);
-}
-.post-actions .action-btn i { /* Basic icon styling if using <i> tags */
-    font-size: 1.1em; 
+    font-size: 0.9em; /* Restored original font size */
+    transition: all 0.2s ease;
 }
 
+.action-btn:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+}
 
-/* Minimalist Select for Status (in post footer) */
+/* Status selector */
 .post-status-selector-container {
-    /* Flex handled by .post-footer */
+    display: flex;
+    align-items: center;
 }
-.minimalist-select.post-status-select {
-    font-size: 0.8em; /* ~12px */
-    font-weight: 500;
-    color: var(--text-color-secondary);
-    border: 1px solid transparent; /* Initially transparent */
-    background-color: transparent;
-    padding: 4px 20px 4px 6px; /* Space for caret, less vertical padding */
+
+.post-status-select {
+    background-color: var(--bg-subtle);
+    border: 1px solid var(--border-color);
     border-radius: var(--border-radius-sm);
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2210%22%20height%3D%2210%22%20fill%3D%22%2365676B%22%3E%3Cpath%20d%3D%22M0%202.5l5%205%205-5z%22/%3E%3C/svg%3E');
-    background-repeat: no-repeat;
-    background-position: right 6px center;
-    background-size: 8px 8px;
+    padding: 6px 10px; /* Restored original padding */
+    font-size: 0.9em; /* Restored original font size */
+    color: var(--text-secondary);
     cursor: pointer;
-    min-width: 110px; /* Ensure enough space for text like "Follow-up" */
-    text-align: left;
-}
-.minimalist-select.post-status-select:hover {
-    background-color: var(--action-button-hover-bg);
-    border-color: var(--card-border-color); /* Subtle border on hover */
-}
-.minimalist-select.post-status-select:focus {
-    border-color: var(--link-color);
-    box-shadow: 0 0 0 2px rgba(0,123,255,.2);
-    background-color: var(--card-bg);
+    transition: all 0.2s ease;
 }
 
-
-/* Unread email post indication */
-.post-card.email-unread {
-    background-color: #f8f9ff;
-    border-left: 3px solid var(--link-color);
-    padding-left: 13px;
-    position: relative;
+.post-status-select:hover {
+    border-color: var(--border-hover);
+    background-color: var(--bg-hover);
 }
 
-.post-card.email-unread::before {
-    content: '';
-    position: absolute;
-    top: 15px;
-    left: 5px;
-    width: 8px;
-    height: 8px;
-    background-color: var(--link-color);
-    border-radius: 50%;
+.post-status-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-color-alpha);
 }
 
-.post-card.email-unread .post-author-line .author-name,
-.post-card.email-unread .post-content-subject {
-    font-weight: 700;
-    color: var(--text-color-primary);
-}
 
 /* === General UI Elements: Buttons === */
 button, input[type="submit"], input[type="button"] {
@@ -688,35 +700,63 @@ button:disabled, input:disabled {
 
 
 .group-item {
-    padding: 8px 10px; /* Slightly less padding */
-    margin-bottom: 6px; /* Slightly less margin */
-    background-color: #E9ECEF; 
-    border: 1px solid #DEE2E6;
-    border-radius: var(--border-radius-sm);
+    padding: 8px 12px; /* Reduced padding */
+    margin-bottom: 6px; /* Reduced margin */
+    background-color: var(--main-content-bg); /* Use main content background */
+    border: 1px solid var(--card-border-color);
+    border-radius: var(--border-radius-sm); /* Reduced border radius */
     display: flex;
     justify-content: space-between;
     align-items: center;
-    transition: background-color 0.2s ease-in-out;
+    transition: all 0.2s ease-in-out;
+    position: relative;
+    font-size: 0.9em; /* Smaller font size */
 }
 .group-item:hover {
-    background-color: #DFE3E7;
+    background-color: #E9ECEF;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
 }
 .group-item span {
     font-weight: 500;
-    font-size: 0.9em;
-}
-/* Minimalist Sidebar View Group Button */
-.view-group-members-btn { 
-    background-color: transparent; /* Toned down */
-    color: var(--text-color-secondary); /* Toned down */
-    border: 1px solid var(--card-border-color); /* Subtle border */
-    font-size: 0.75em; /* Smaller */
-    padding: 4px 8px; /* Smaller */
-    font-weight: 400;
-}
-.view-group-members-btn:hover {
-    background-color: #E0E0E0; /* Light hover */
+    font-size: 0.95em;
     color: var(--text-color-primary);
+}
+
+.group-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Minimalist Sidebar View Group Button */
+.view-group-members-btn,
+.edit-group-btn { 
+    background-color: transparent;
+    color: var(--text-color-secondary);
+    border: 1px solid var(--card-border-color);
+    font-size: 0.75em;
+    padding: 6px 10px;
+    font-weight: 400;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.view-group-members-btn:hover,
+.edit-group-btn:hover {
+    background-color: var(--link-color);
+    color: white;
+    border-color: var(--link-color);
+}
+
+.edit-group-btn {
+    background-color: var(--link-color);
+    color: white;
+    border-color: var(--link-color);
+}
+.edit-group-btn:hover {
+    background-color: var(--link-color-hover);
+    border-color: var(--link-color-hover);
 }
 
 
@@ -1762,4 +1802,70 @@ mark {
     border-radius: 10px;
     font-size: 0.75em;
     margin-left: 0.5rem;
+}
+
+/* Group member styling */
+.member-item {
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border-color);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9em;
+}
+
+/* Group page specific styling */
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.back-link {
+    display: inline-block;
+    color: var(--link-color);
+    text-decoration: none;
+    margin-bottom: 1rem;
+    font-weight: 500;
+}
+
+.back-link:hover {
+    color: var(--link-color-hover);
+    text-decoration: underline;
+}
+
+.group-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.content-section {
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border-color);
+    border-radius: var(--border-radius-md);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.content-section h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--text-color-primary);
+    font-size: 1.3em;
+}
+
+.members-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.error-message {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-color-secondary);
+}
+
+.error-message h1 {
+    color: var(--text-color-primary);
+    margin-bottom: 1rem;
 }

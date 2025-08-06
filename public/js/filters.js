@@ -5,6 +5,10 @@
 
 class AdvancedFilters {
     constructor() {
+        this.currentFilters = {};
+        this.savedPresets = this.loadPresets();
+        this.debounceTimer = null;
+        
         // Initialize filter elements
         this.keywordInput = document.getElementById('keyword-search');
         this.senderInput = document.getElementById('sender-filter');
@@ -287,8 +291,8 @@ class AdvancedFilters {
         fromDate.setDate(fromDate.getDate() - days);
 
         // Update date inputs
-        document.getElementById('date-from').value = fromDate.toISOString().split('T')[0];
-        document.getElementById('date-to').value = toDate.toISOString().split('T')[0];
+        if (this.startDateInput) this.startDateInput.value = fromDate.toISOString().split('T')[0];
+        if (this.endDateInput) this.endDateInput.value = toDate.toISOString().split('T')[0];
 
         // Update active state
         document.querySelectorAll('.quick-date-btn').forEach(btn => btn.classList.remove('active'));
@@ -364,8 +368,8 @@ class AdvancedFilters {
         const apiParams = this.convertFiltersToApiParams();
         
         // Apply filters to the feed
-        if (typeof loadFeed === 'function') {
-            loadFeed(apiParams);
+        if (typeof window.loadFeed === 'function') {
+            window.loadFeed(apiParams);
         } else {
             console.warn('loadFeed function not available');
         }
@@ -416,11 +420,11 @@ class AdvancedFilters {
 
     clearAllFilters() {
         // Clear all input fields
-        document.getElementById('keyword-search').value = '';
-        document.getElementById('sender-filter').value = '';
-        document.getElementById('recipient-filter').value = '';
-        document.getElementById('date-from').value = '';
-        document.getElementById('date-to').value = '';
+        if (this.keywordInput) this.keywordInput.value = '';
+        if (this.senderInput) this.senderInput.value = '';
+        if (this.recipientInput) this.recipientInput.value = '';
+        if (this.startDateInput) this.startDateInput.value = '';
+        if (this.endDateInput) this.endDateInput.value = '';
 
         // Uncheck all checkboxes
         document.querySelectorAll('#right-sidebar input[type="checkbox"]').forEach(checkbox => {
@@ -434,8 +438,8 @@ class AdvancedFilters {
         this.currentFilters = {};
 
         // Reload feed without filters
-        if (typeof loadFeed === 'function') {
-            loadFeed({});
+        if (typeof window.loadFeed === 'function') {
+            window.loadFeed({});
         }
     }
 
@@ -481,24 +485,24 @@ class AdvancedFilters {
 
     applyPresetToUI(filters) {
         // Apply keyword search
-        if (filters.keyword) {
-            document.getElementById('keyword-search').value = filters.keyword;
+        if (filters.keyword && this.keywordInput) {
+            this.keywordInput.value = filters.keyword;
         }
 
         // Apply sender/recipient filters
-        if (filters.sender) {
-            document.getElementById('sender-filter').value = filters.sender;
+        if (filters.sender && this.senderInput) {
+            this.senderInput.value = filters.sender;
         }
-        if (filters.recipient) {
-            document.getElementById('recipient-filter').value = filters.recipient;
+        if (filters.recipient && this.recipientInput) {
+            this.recipientInput.value = filters.recipient;
         }
 
         // Apply date filters
-        if (filters.dateFrom) {
-            document.getElementById('date-from').value = filters.dateFrom;
+        if (filters.dateFrom && this.startDateInput) {
+            this.startDateInput.value = filters.dateFrom;
         }
-        if (filters.dateTo) {
-            document.getElementById('date-to').value = filters.dateTo;
+        if (filters.dateTo && this.endDateInput) {
+            this.endDateInput.value = filters.dateTo;
         }
 
         // Apply checkboxes
