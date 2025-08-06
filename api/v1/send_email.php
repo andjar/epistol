@@ -24,16 +24,114 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 try {
-    // 3. Input Parameters (from JSON body)
-    // Check if running in PHPUnit test environment to use mocked input
-    if (getenv('PHPUNIT_RUNNING') === 'true' && isset($GLOBALS['mock_php_input_data'])) {
-        $input_data = json_decode($GLOBALS['mock_php_input_data'], true);
+    // 3. Input Parameters - Handle both JSON and FormData
+    $input_data = [];
+    $processed_attachments_for_mailer = [];
+    
+    // Check if this is a FormData request (multipart/form-data)
+    if (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
+        // Handle FormData with file uploads
+        $recipients_json = $_POST['recipients'] ?? '[]';
+        $recipients = json_decode($recipients_json, true);
+        if (!is_array($recipients)) {
+            send_json_error('Invalid recipients format in FormData.', 400);
+        }
+        
+        $subject = $_POST['subject'] ?? '';
+        $body_text = $_POST['body_text'] ?? '';
+        $body_html = $_POST['body_html'] ?? '';
+        $in_reply_to_email_id = $_POST['in_reply_to_email_id'] ?? null;
+        
+        // Handle file attachments from FormData
+        if (isset($_FILES['attachments'])) {
+            $uploaded_files = $_FILES['attachments'];
+            
+            // Handle multiple files
+            if (is_array($uploaded_files['name'])) {
+                for ($i = 0; $i < count($uploaded_files['name']); $i++) {
+                    if ($uploaded_files['error'][$i] === UPLOAD_ERR_OK) {
+                        $filename = $uploaded_files['name'][$i];
+                        $tmp_path = $uploaded_files['tmp_name'][$i];
+                        $mimetype = $uploaded_files['type'][$i];
+                        
+                        // Read file content
+                        $content = file_get_contents($tmp_path);
+                        if ($content === false) {
+                            send_json_error('Failed to read uploaded file: ' . htmlspecialchars($filename), 400);
+                        }
+                        
+                        $processed_attachments_for_mailer[] = [
+                            'filename' => $filename,
+                            'content' => $content,
+                            'mimetype' => $mimetype
+                        ];
+                    } else {
+                        send_json_error('File upload error for: ' . htmlspecialchars($uploaded_files['name'][$i]), 400);
+                    }
+                }
+            } else {
+                // Single file
+                if ($uploaded_files['error'] === UPLOAD_ERR_OK) {
+                    $filename = $uploaded_files['name'];
+                    $tmp_path = $uploaded_files['tmp_name'];
+                    $mimetype = $uploaded_files['type'];
+                    
+                    $content = file_get_contents($tmp_path);
+                    if ($content === false) {
+                        send_json_error('Failed to read uploaded file: ' . htmlspecialchars($filename), 400);
+                    }
+                    
+                    $processed_attachments_for_mailer[] = [
+                        'filename' => $filename,
+                        'content' => $content,
+                        'mimetype' => $mimetype
+                    ];
+                } else {
+                    send_json_error('File upload error', 400);
+                }
+            }
+        }
+        
+        $input_data = [
+            'recipients' => $recipients,
+            'subject' => $subject,
+            'body_text' => $body_text,
+            'body_html' => $body_html,
+            'in_reply_to_email_id' => $in_reply_to_email_id
+        ];
+        
     } else {
-        $input_data = json_decode(file_get_contents('php://input'), true);
-    }
+        // Handle JSON request (original method)
+        // Check if running in PHPUnit test environment to use mocked input
+        if (getenv('PHPUNIT_RUNNING') === 'true' && isset($GLOBALS['mock_php_input_data'])) {
+            $input_data = json_decode($GLOBALS['mock_php_input_data'], true);
+        } else {
+            $input_data = json_decode(file_get_contents('php://input'), true);
+        }
 
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        send_json_error('Invalid JSON input: ' . json_last_error_msg(), 400);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            send_json_error('Invalid JSON input: ' . json_last_error_msg(), 400);
+        }
+        
+        // Handle base64 attachments from JSON
+        $attachments_input = isset($input_data['attachments']) && is_array($input_data['attachments']) ? $input_data['attachments'] : [];
+        
+        if (!empty($attachments_input)) {
+            foreach ($attachments_input as $att) {
+                if (empty($att['filename']) || !isset($att['content_base64']) || empty($att['mimetype'])) {
+                    send_json_error('Invalid attachment object. Filename, content_base64, and mimetype are required for each attachment.', 400);
+                }
+                $decoded_content = base64_decode($att['content_base64'], true);
+                if ($decoded_content === false) {
+                    send_json_error('Invalid base64 content for attachment: ' . htmlspecialchars($att['filename']), 400);
+                }
+                $processed_attachments_for_mailer[] = [
+                    'filename' => $att['filename'],
+                    'content' => $decoded_content,
+                    'mimetype' => $att['mimetype']
+                ];
+            }
+        }
     }
 
     // Validate recipients
@@ -71,21 +169,6 @@ try {
 
 
     $in_reply_to_email_id = isset($input_data['in_reply_to_email_id']) && !empty(trim($input_data['in_reply_to_email_id'])) ? trim($input_data['in_reply_to_email_id']) : null;
-    $attachments_input = isset($input_data['attachments']) && is_array($input_data['attachments']) ? $input_data['attachments'] : [];
-
-    $processed_attachments_for_mailer = [];
-    if (!empty($attachments_input)) {
-        foreach ($attachments_input as $att) {
-            if (empty($att['filename']) || !isset($att['content_base64']) || empty($att['mimetype'])) {
-                send_json_error('Invalid attachment object. Filename, content_base64, and mimetype are required for each attachment.', 400);
-            }
-            $decoded_content = base64_decode($att['content_base64'], true);
-            if ($decoded_content === false) {
-                send_json_error('Invalid base64 content for attachment: ' . htmlspecialchars($att['filename']), 400);
-            }
-            $processed_attachments_for_mailer[] = [ 'filename' => $att['filename'], 'content' => $decoded_content, 'mimetype' => $att['mimetype'] ];
-        }
-    }
 
     // 4. SMTP Sending
     $mailMan = new SmtpMailer(SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_ENCRYPTION);

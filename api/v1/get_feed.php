@@ -50,73 +50,35 @@ try {
     // Calculate offset for pagination
     $offset = ($page - 1) * $limit;
 
-    // Main SQL Query using CTEs
+    // Main SQL Query - Simplified approach
     $sql = "
-        WITH LatestEmailInThread AS (
-            SELECT
-                e.thread_id,
-                e.id AS email_id,
-                e.subject AS email_subject,
-                SUBSTRING(e.body_text, 1, 100) AS body_preview,
-                e.created_at AS email_timestamp,
-                u.id AS sender_user_id,
-                p.id AS sender_person_id,
-                COALESCE(p.name, u.username) AS sender_name,
-                p.avatar_url AS sender_avatar_url,
-                COALESCE(es.status, 'unread') AS email_status,
-                ROW_NUMBER() OVER(PARTITION BY e.thread_id ORDER BY e.created_at DESC) as rn
-            FROM emails e
-            JOIN users u ON e.user_id = u.id
-            LEFT JOIN persons p ON u.person_id = p.id
-            LEFT JOIN email_statuses es ON e.id = es.email_id AND es.user_id = :current_user_id
-        ),
-        ThreadParticipantsAgg AS (
-            SELECT
-                e.thread_id,
-                GROUP_CONCAT(DISTINCT COALESCE(p.name, u.username)) as participant_names_str
-            FROM emails e
-            JOIN users u ON e.user_id = u.id
-            LEFT JOIN persons p ON u.person_id = p.id
-            GROUP BY e.thread_id
-        )
         SELECT
             t.id AS thread_id,
             t.subject AS thread_subject,
-            COALESCE(le.email_timestamp, t.last_activity_at) AS last_activity_at, -- Use email timestamp if available
-            le.email_id, 
-            le.email_subject, 
-            le.body_preview, 
-            le.email_timestamp,
-            le.sender_user_id, 
-            le.sender_person_id, 
-            le.sender_name, 
-            le.sender_avatar_url,
-            le.email_status,
-            tp.participant_names_str
+            t.last_activity_at,
+            t.group_id,
+            g.name AS group_name
         FROM threads t
-        JOIN LatestEmailInThread le ON t.id = le.thread_id AND le.rn = 1
-        LEFT JOIN ThreadParticipantsAgg tp ON t.id = tp.thread_id
+        LEFT JOIN groups g ON t.group_id = g.id
         WHERE 1=1";
 
-    $bindings = [':current_user_id' => $user_id];
+    $bindings = [];
 
     if ($group_id_filter !== null) {
         $sql .= " AND t.group_id = :group_id_filter";
         $bindings[':group_id_filter'] = $group_id_filter;
     }
 
-    if ($person_id_filter !== null) {
-        $sql .= " AND le.sender_person_id = :person_id_filter";
-        $bindings[':person_id_filter'] = $person_id_filter;
-    }
-
+    // Apply status filter at thread level
     if ($status_filter !== null) {
-        if ($status_filter === 'unread') {
-            $sql .= " AND (le.email_status = 'unread' OR le.email_status IS NULL)";
-        } else {
-            $sql .= " AND le.email_status = :status_filter";
-            $bindings[':status_filter'] = $status_filter;
-        }
+        $sql .= " AND EXISTS (
+            SELECT 1 FROM emails e 
+            LEFT JOIN email_statuses es ON e.id = es.email_id AND es.user_id = :user_id_for_status
+            WHERE e.thread_id = t.id 
+            AND (es.status = :status_filter OR (es.status IS NULL AND :status_filter = 'unread'))
+        )";
+        $bindings[':user_id_for_status'] = $user_id;
+        $bindings[':status_filter'] = $status_filter;
     }
     
     // Ensure thread has at least one email (implicitly handled by JOIN with LatestEmailInThread)
@@ -128,38 +90,28 @@ try {
     $count_sql_outer = "SELECT COUNT(DISTINCT ft.id) FROM (
         SELECT t_outer.id
         FROM threads t_outer
-        JOIN (
-            SELECT e_inner.thread_id, e_inner.id AS latest_email_id,
-                   p_inner.id as sender_person_id,
-                   COALESCE(es_inner.status, 'unread') AS latest_email_status,
-                   ROW_NUMBER() OVER(PARTITION BY e_inner.thread_id ORDER BY e_inner.created_at DESC) as rn
-            FROM emails e_inner
-            JOIN users u_inner ON e_inner.user_id = u_inner.id
-            LEFT JOIN persons p_inner ON u_inner.person_id = p_inner.id
-            LEFT JOIN email_statuses es_inner ON e_inner.id = es_inner.email_id AND es_inner.user_id = :current_user_id_count_outer
-        ) le_check ON t_outer.id = le_check.thread_id AND le_check.rn = 1
+        LEFT JOIN groups g_outer ON t_outer.group_id = g_outer.id
         WHERE 1=1";
 
-    $count_bindings_outer = [':current_user_id_count_outer' => $user_id];
+    $count_bindings_outer = [];
 
     if ($group_id_filter !== null) {
         $count_sql_outer .= " AND t_outer.group_id = :group_id_filter_count_outer";
         $count_bindings_outer[':group_id_filter_count_outer'] = $group_id_filter;
     }
 
-    if ($person_id_filter !== null) {
-        $count_sql_outer .= " AND le_check.sender_person_id = :person_id_filter_count_outer";
-        $count_bindings_outer[':person_id_filter_count_outer'] = $person_id_filter;
+    // Apply status filter at thread level for count query
+    if ($status_filter !== null) {
+        $count_sql_outer .= " AND EXISTS (
+            SELECT 1 FROM emails e_outer 
+            LEFT JOIN email_statuses es_outer ON e_outer.id = es_outer.email_id AND es_outer.user_id = :user_id_for_status_count
+            WHERE e_outer.thread_id = t_outer.id 
+            AND (es_outer.status = :status_filter_count OR (es_outer.status IS NULL AND :status_filter_count = 'unread'))
+        )";
+        $count_bindings_outer[':user_id_for_status_count'] = $user_id;
+        $count_bindings_outer[':status_filter_count'] = $status_filter;
     }
 
-    if ($status_filter !== null) {
-        if ($status_filter === 'unread') {
-            $count_sql_outer .= " AND (le_check.latest_email_status = 'unread' OR le_check.latest_email_status IS NULL)";
-        } else {
-            $count_sql_outer .= " AND le_check.latest_email_status = :status_filter_count_outer";
-            $count_bindings_outer[':status_filter_count_outer'] = $status_filter;
-        }
-    }
     $count_sql_outer .= " ) ft";
 
 
@@ -187,30 +139,86 @@ try {
     // 4. Data Processing
     $processed_threads = [];
     foreach ($results as $row) {
-        $participants = [];
-        if (!empty($row['participant_names_str'])) {
-            $participants = array_unique(explode(',', $row['participant_names_str']));
+        // Get all emails for this thread
+        $emails_stmt = $pdo->prepare("
+            SELECT 
+                e.id AS email_id,
+                e.parent_email_id,
+                e.subject AS email_subject,
+                e.body_text,
+                e.body_html,
+                SUBSTRING(e.body_text, 1, 100) AS body_preview,
+                e.created_at AS email_timestamp,
+                u.id AS sender_user_id,
+                u.email AS sender_email,
+                p.id AS sender_person_id,
+                COALESCE(p.name, u.username) AS sender_name,
+                p.avatar_url AS sender_avatar_url,
+                COALESCE(es.status, 'unread') AS email_status
+            FROM emails e
+            JOIN users u ON e.user_id = u.id
+            LEFT JOIN persons p ON u.person_id = p.id
+            LEFT JOIN email_statuses es ON e.id = es.email_id AND es.user_id = :current_user_id
+            WHERE e.thread_id = :thread_id
+            ORDER BY e.created_at ASC
+        ");
+        $emails_stmt->execute(['thread_id' => $row['thread_id'], 'current_user_id' => $user_id]);
+        $thread_emails = $emails_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $processed_emails = [];
+        foreach ($thread_emails as $email) {
+            // Fetch attachments for this email
+            $attachments = [];
+            $attachments_stmt = $pdo->prepare("SELECT id, filename, mimetype, filesize_bytes FROM attachments WHERE email_id = :email_id");
+            $attachments_stmt->execute(['email_id' => $email['email_id']]);
+            $attachments = $attachments_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Fetch recipients for this email
+            $recipients = [];
+            $recipients_stmt = $pdo->prepare("
+                SELECT p.name, ea.email_address, er.type 
+                FROM email_recipients er
+                JOIN persons p ON er.person_id = p.id
+                JOIN email_addresses ea ON p.id = ea.person_id AND ea.is_primary = 1
+                WHERE er.email_id = :email_id
+            ");
+            $recipients_stmt->execute(['email_id' => $email['email_id']]);
+            $recipients = $recipients_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Fetch user-specific statuses for this email
+            $user_statuses = [];
+            $statuses_stmt = $pdo->prepare("SELECT user_id, status FROM email_statuses WHERE email_id = :email_id");
+            $statuses_stmt->execute(['email_id' => $email['email_id']]);
+            $user_statuses = $statuses_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $processed_emails[] = [
+                'email_id' => (int)$email['email_id'],
+                'parent_email_id' => $email['parent_email_id'] ? (int)$email['parent_email_id'] : null,
+                'subject' => $email['email_subject'],
+                'sender_user_id' => (int)$email['sender_user_id'],
+                'sender_email' => $email['sender_email'],
+                'sender_person_id' => $email['sender_person_id'] ? (int)$email['sender_person_id'] : null,
+                'sender_name' => $email['sender_name'],
+                'sender_avatar_url' => $email['sender_avatar_url'] ?: '/avatars/default.png',
+                'body_text' => $email['body_text'],
+                'body_html' => $email['body_html'],
+                'body_preview' => $email['body_preview'],
+                'timestamp' => $email['email_timestamp'],
+                'status' => $email['email_status'],
+                'group_id' => $row['group_id'] ? (int)$row['group_id'] : null,
+                'group_name' => $row['group_name'],
+                'attachments' => $attachments,
+                'recipients' => $recipients,
+                'user_specific_statuses' => $user_statuses
+            ];
         }
 
         $processed_threads[] = [
             'thread_id' => (int)$row['thread_id'],
             'subject' => $row['thread_subject'],
-            'participants' => $participants, // Array of names
-            'last_reply_time' => $row['last_activity_at'], // This is now correctly the latest email's timestamp or thread's last activity
-            'emails' => [ // Emails array will contain only the latest email
-                [
-                    'email_id' => (int)$row['email_id'],
-                    'parent_email_id' => null, // The CTE doesn't fetch parent_email_id for the latest email, adjust if needed
-                    'subject' => $row['email_subject'],
-                    'sender_user_id' => (int)$row['sender_user_id'],
-                    'sender_person_id' => $row['sender_person_id'] ? (int)$row['sender_person_id'] : null,
-                    'sender_name' => $row['sender_name'],
-                    'sender_avatar_url' => $row['sender_avatar_url'] ?: '/avatars/default.png',
-                    'body_preview' => $row['body_preview'],
-                    'timestamp' => $row['email_timestamp'],
-                    'status' => $row['email_status']
-                ]
-            ]
+            'participants' => [], // Will be populated from emails
+            'last_reply_time' => $row['last_activity_at'],
+            'emails' => $processed_emails // All emails in the thread
         ];
     }
 

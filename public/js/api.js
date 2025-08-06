@@ -113,24 +113,35 @@ async createGroup(groupData) {
 
 /**
  * Sends email data to the backend API.
- * @param {Object} emailData - The email data to send.
- * @param {string[]} emailData.recipients - Array of recipient email addresses.
- * @param {string} emailData.subject - Email subject.
- * @param {string} [emailData.body_html] - HTML body of the email.
- * @param {string} [emailData.body_text] - Plain text body of the email.
- * @param {string|null} [emailData.in_reply_to_email_id] - ID of the email being replied to, if any.
- * @param {Array} [emailData.attachments] - Array of attachment objects (currently not implemented in frontend form).
+ * @param {FormData|Object} emailData - The email data to send. Can be FormData (for file uploads) or JSON object.
+ * @param {string[]} [emailData.recipients] - Array of recipient email addresses (for JSON).
+ * @param {string} [emailData.subject] - Email subject (for JSON).
+ * @param {string} [emailData.body_html] - HTML body of the email (for JSON).
+ * @param {string} [emailData.body_text] - Plain text body of the email (for JSON).
+ * @param {string|null} [emailData.in_reply_to_email_id] - ID of the email being replied to, if any (for JSON).
+ * @param {Array} [emailData.attachments] - Array of attachment objects (for JSON).
  * @returns {Promise<Object>} A promise that resolves to the server's response data on success.
  * @throws {Error} Throws an error if the request fails or the server returns an error status.
  */
 async sendEmail(emailData) {
     try {
+        let headers = {};
+        let body;
+        
+        // Check if this is FormData (for file uploads)
+        if (emailData instanceof FormData) {
+            // Don't set Content-Type for FormData - let the browser set it with boundary
+            body = emailData;
+        } else {
+            // JSON request
+            headers['Content-Type'] = 'application/json';
+            body = JSON.stringify(emailData);
+        }
+        
         const response = await fetch('/api/v1/send_email.php', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(emailData),
+            headers: headers,
+            body: body,
         });
 
         const responseData = await response.json(); // Try to parse JSON regardless of response.ok
@@ -248,7 +259,7 @@ async setPostStatus(emailId, userId, status) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                post_id: emailId, // API expects post_id
+                email_id: emailId, // API expects email_id
                 user_id: userId,
                 status: status,
             }),
@@ -266,6 +277,49 @@ async setPostStatus(emailId, userId, status) {
     } catch (error) {
         console.error('Network error or JSON parsing error setting post status:', error);
         throw error.message ? error : new Error('Failed to set post status due to a network or server issue.');
+    }
+},
+
+/**
+ * Updates a user's profile information.
+ * @param {string} personId - The ID of the person to update.
+ * @param {Object} profileData - The profile data to update.
+ * @param {string} profileData.name - The person's name.
+ * @param {Array} profileData.email_addresses - Array of email addresses.
+ * @returns {Promise<Object>} A promise that resolves to the server's response.
+ * @throws {Error} If the request fails.
+ */
+async updateProfile(personId, profileData) {
+    if (!personId || !profileData) {
+        console.error('updateProfile requires personId and profileData.');
+        throw new Error('Missing parameters for updating profile.');
+    }
+
+    try {
+        const response = await fetch('/api/v1/update_profile.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                person_id: personId,
+                name: profileData.name,
+                email_addresses: profileData.email_addresses
+            }),
+        });
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+            const errorMessage = responseData.error || `HTTP error ${response.status}`;
+            console.error('Error updating profile:', errorMessage, responseData);
+            throw new Error(errorMessage);
+        }
+        console.log('Profile updated successfully:', responseData);
+        return responseData;
+    } catch (error) {
+        console.error('Network error or JSON parsing error updating profile:', error);
+        throw error.message ? error : new Error('Failed to update profile due to a network or server issue.');
     }
 }
 };

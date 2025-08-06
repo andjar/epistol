@@ -363,9 +363,65 @@ img {
 /* Individual email message - This is styled as a "post". */
 .post-card {
     padding: 12px 16px;
+    transition: background-color 0.2s ease;
 }
 .post-card:not(:last-child) {
     border-bottom: 1px solid var(--post-separator-color);
+}
+
+/* First post in thread - original email */
+.post-card.is-first-post {
+    background-color: var(--card-bg);
+    border-left: 4px solid var(--link-color); /* Changed from --primary-color to --link-color */
+    font-weight: 500;
+}
+
+/* Reply posts - indented and styled as children */
+.post-card.is-reply-post {
+    background-color: rgba(0, 0, 0, 0.03);
+    margin-left: 24px;
+    border-left: 3px solid #e1e5e9;
+    position: relative;
+    border-radius: 0 8px 8px 0;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+/* Add a subtle connector line for replies */
+.post-card.is-reply-post::before {
+    content: '';
+    position: absolute;
+    left: -24px;
+    top: 24px;
+    width: 21px;
+    height: 2px;
+    background-color: #e1e5e9;
+}
+
+/* Nested replies get more indentation */
+.post-card.is-reply-post .post-card.is-reply-post {
+    margin-left: 32px;
+    background-color: rgba(0, 0, 0, 0.02);
+    border-left-color: #d1d5d9;
+}
+
+/* Reply indicator */
+.post-card.is-reply-post .post-header::after {
+    content: '↳';
+    position: absolute;
+    left: -30px;
+    top: 12px;
+    color: #6c757d;
+    font-size: 14px;
+    font-weight: bold;
+    background-color: #f8f9fa;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e1e5e9;
 }
 
 /* Header of an individual email "post" */
@@ -373,6 +429,7 @@ img {
     display: flex;
     align-items: flex-start; /* Align avatar top, text next to it */
     margin-bottom: 8px;
+    position: relative;
 }
 
 .post-avatar {
@@ -1036,3 +1093,673 @@ select#status-feed-filter:focus, select#group-feed-filter:focus {
    This can lead to some overlap, but generally, more specific selectors or later-defined rules win.
    The provided CSS aims to be self-contained for the correspondence block.
 */
+
+/* === Search Results Styles === */
+.search-results {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--card-border-color);
+}
+
+.search-results h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: var(--text-color-primary);
+}
+
+.search-results p {
+    color: var(--text-color-secondary);
+    margin-bottom: 20px;
+}
+
+.search-section {
+    margin-bottom: 30px;
+}
+
+.search-section h4 {
+    margin-bottom: 15px;
+    color: var(--text-color-primary);
+    font-size: 1.1em;
+    border-bottom: 2px solid var(--link-color);
+    padding-bottom: 5px;
+}
+
+.search-result-item {
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border-color);
+    border-radius: var(--border-radius-md);
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s ease;
+}
+
+.search-result-item:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.result-header strong {
+    color: var(--text-color-primary);
+    font-size: 1.1em;
+}
+
+.result-date, .result-email {
+    color: var(--text-color-secondary);
+    font-size: 0.9em;
+}
+
+.result-subject {
+    margin-bottom: 10px;
+    color: var(--text-color-primary);
+}
+
+.result-preview {
+    color: var(--text-color-secondary);
+    font-size: 0.9em;
+    line-height: 1.4;
+    margin-bottom: 15px;
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: var(--border-radius-sm);
+    border-left: 3px solid var(--link-color);
+}
+
+.result-meta {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    color: var(--text-color-secondary);
+    font-size: 0.9em;
+}
+
+.result-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.result-actions button {
+    background-color: var(--link-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+.result-actions button:hover {
+    background-color: var(--link-color-hover);
+}
+
+.no-results {
+    text-align: center;
+    padding: 40px 20px;
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--card-border-color);
+}
+
+.no-results h3 {
+    color: var(--text-color-primary);
+    margin-bottom: 10px;
+}
+
+.no-results p {
+    color: var(--text-color-secondary);
+}
+
+/* Responsive adjustments for search results */
+@media (max-width: 768px) {
+    .search-results {
+        padding: 15px;
+    }
+    
+    .result-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .result-meta {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .result-actions {
+        flex-direction: column;
+    }
+    
+    .result-actions button {
+        width: 100%;
+    }
+}
+
+/* === Email Attachments Styles === */
+.email-attachments {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid #e9ecef;
+}
+
+.email-attachments h5 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: var(--text-color-primary);
+    font-size: 0.95em;
+    font-weight: 600;
+}
+
+.attachment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.attachment-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: var(--border-radius-sm);
+    transition: background-color 0.2s ease;
+}
+
+.attachment-item:hover {
+    background-color: #f8f9fa;
+}
+
+.attachment-icon {
+    font-size: 1.2em;
+    color: var(--text-color-secondary);
+}
+
+.attachment-name {
+    flex: 1;
+    font-weight: 500;
+    color: var(--text-color-primary);
+    font-size: 0.9em;
+    word-break: break-word;
+}
+
+.attachment-size {
+    color: var(--text-color-secondary);
+    font-size: 0.8em;
+    white-space: nowrap;
+}
+
+.attachment-download-btn {
+    background-color: var(--link-color);
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-size: 0.8em;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
+}
+
+.attachment-download-btn:hover {
+    background-color: var(--link-color-hover);
+}
+
+/* Responsive adjustments for attachments */
+@media (max-width: 768px) {
+    .attachment-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    
+    .attachment-name {
+        width: 100%;
+    }
+    
+    .attachment-download-btn {
+        align-self: flex-end;
+    }
+}
+
+/* === Advanced Filtering Sidebar Styles === */
+#right-sidebar {
+    background-color: var(--sidebar-bg);
+    padding: 20px;
+    border-left: 1px solid var(--card-border-color);
+    overflow-y: auto;
+    max-height: 100vh;
+}
+
+#right-sidebar h2 {
+    margin-bottom: 20px;
+    color: var(--text-color-primary);
+    font-size: 1.3em;
+    font-weight: 600;
+}
+
+.filter-section {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--post-separator-color);
+}
+
+.filter-section:last-child {
+    border-bottom: none;
+}
+
+.filter-section h3 {
+    margin-bottom: 12px;
+    font-size: 1em;
+    font-weight: 600;
+    color: var(--text-color-primary);
+}
+
+.filter-section h4 {
+    margin: 12px 0 8px 0;
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--text-color-secondary);
+}
+
+#right-sidebar input[type="text"],
+#right-sidebar input[type="date"] {
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border: 1px solid var(--card-border-color);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9em;
+    background-color: white;
+    transition: border-color 0.2s ease;
+}
+
+#right-sidebar input[type="text"]:focus,
+#right-sidebar input[type="date"]:focus {
+    outline: none;
+    border-color: var(--link-color);
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1);
+}
+
+.filter-options {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.filter-options label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9em;
+    color: var(--text-color-primary);
+    cursor: pointer;
+}
+
+.filter-options input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+}
+
+.file-type-filters,
+.size-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.quick-dates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.quick-date-btn {
+    padding: 6px 12px;
+    font-size: 0.8em;
+    background-color: #F0F2F5;
+    color: var(--text-color-primary);
+    border: 1px solid var(--card-border-color);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.quick-date-btn:hover {
+    background-color: #E4E6EB;
+    border-color: #DADDE1;
+}
+
+.quick-date-btn.active {
+    background-color: var(--link-color);
+    color: white;
+    border-color: var(--link-color);
+}
+
+.filter-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.primary-btn,
+.secondary-btn,
+.small-btn {
+    padding: 10px 16px;
+    font-size: 0.9em;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.primary-btn {
+    background-color: var(--link-color);
+    color: white;
+}
+
+.primary-btn:hover {
+    background-color: var(--link-color-hover);
+}
+
+.secondary-btn {
+    background-color: #F0F2F5;
+    color: var(--text-color-primary);
+    border: 1px solid var(--card-border-color);
+}
+
+.secondary-btn:hover {
+    background-color: #E4E6EB;
+}
+
+.small-btn {
+    padding: 6px 12px;
+    font-size: 0.8em;
+    background-color: #F0F2F5;
+    color: var(--text-color-primary);
+    border: 1px solid var(--card-border-color);
+}
+
+.small-btn:hover {
+    background-color: #E4E6EB;
+}
+
+.small-btn.danger {
+    background-color: #FFE6E6;
+    color: #D32F2F;
+    border-color: #FFCDD2;
+}
+
+.small-btn.danger:hover {
+    background-color: #FFCDD2;
+}
+
+#filter-presets {
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    border: 1px solid var(--card-border-color);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.9em;
+    background-color: white;
+}
+
+/* === Profile Editor Modal Styles === */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: var(--card-bg);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-xl);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: var(--text-color-primary);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-color-secondary);
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.close-btn:hover {
+    background-color: var(--hover-bg);
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-color-primary);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    background-color: var(--input-bg);
+    color: var(--text-color-primary);
+    font-size: 0.9rem;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.email-input-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    align-items: center;
+}
+
+.email-input-group input {
+    flex: 1;
+}
+
+.remove-email-btn {
+    background-color: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background-color 0.2s;
+}
+
+.remove-email-btn:hover {
+    background-color: #dc2626;
+}
+
+.add-email-btn {
+    background-color: var(--success-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.add-email-btn:hover {
+    background-color: #059669;
+}
+
+.form-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    justify-content: flex-end;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #1d4ed8;
+}
+
+.btn-secondary {
+    background-color: var(--secondary-bg);
+    color: var(--text-color-primary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background-color: var(--hover-bg);
+}
+
+/* === Autocomplete Suggestions Styles === */
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+    box-shadow: var(--shadow-md);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.suggestion-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover,
+.suggestion-item.active {
+    background-color: var(--hover-bg);
+}
+
+.suggestion-name {
+    font-weight: 500;
+    color: var(--text-color-primary);
+    margin-bottom: 0.25rem;
+}
+
+.suggestion-email {
+    font-size: 0.8rem;
+    color: var(--text-color-secondary);
+}
+
+/* Position relative for input containers with autocomplete */
+.filter-section {
+    position: relative;
+}
+
+/* Search highlighting and active filters */
+.active-filters {
+    background: var(--link-color);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.85em;
+    margin-bottom: 1rem;
+}
+
+/* Search highlighting */
+mark {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 0.1em 0.2em;
+    border-radius: 2px;
+    font-weight: 600;
+}
+
+.attachment-indicator {
+    background: var(--link-color);
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.75em;
+    margin-left: 0.5rem;
+}

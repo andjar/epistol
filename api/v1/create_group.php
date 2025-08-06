@@ -111,21 +111,17 @@ try {
                              // Assuming groups.created_by_person_id allows NULL or has a default.
 
     // Create Group
-    $group_id = "grp_" . bin2hex(random_bytes(16));
     $created_at = date('Y-m-d H:i:s');
-    $updated_at = $created_at;
 
     $stmt_create_group = $pdo->prepare(
-        "INSERT INTO groups (group_id, name, created_by_person_id, created_at, updated_at)
-         VALUES (:group_id, :name, :creator_id, :created_at, :updated_at)"
+        "INSERT INTO groups (name, created_by_user_id, created_at)
+         VALUES (:name, :creator_id, :created_at)"
     );
     try {
         $stmt_create_group->execute([
-            'group_id' => $group_id,
             'name' => $group_name,
             'creator_id' => $current_user_id,
-            'created_at' => $created_at,
-            'updated_at' => $updated_at
+            'created_at' => $created_at
         ]);
     } catch (PDOException $e) {
         if ($e->getCode() == '23000' || $e->getCode() == '23505') {
@@ -136,26 +132,29 @@ try {
         }
     }
 
+    // Get the inserted group ID
+    $group_id = $pdo->lastInsertId();
+    
     // Add Members (if provided)
     if (!empty($member_person_ids)) {
         $stmt_add_member = $pdo->prepare(
-            "INSERT INTO group_members (group_id, person_id, joined_at) VALUES (:group_id, :person_id, :joined_at)"
+            "INSERT INTO group_members (group_id, user_id, joined_at) VALUES (:group_id, :user_id, :joined_at)"
         );
-        $stmt_check_person = $pdo->prepare("SELECT person_id FROM persons WHERE person_id = :person_id");
+        $stmt_check_user = $pdo->prepare("SELECT id FROM users WHERE id = :user_id");
         $member_joined_at = date('Y-m-d H:i:s');
 
-        foreach ($member_person_ids as $person_id) {
-            $stmt_check_person->execute(['person_id' => $person_id]);
-            if (!$stmt_check_person->fetch()) {
-                error_log("Attempted to add non-existent person_id '{$person_id}' to group '{$group_id}'. Skipping.");
+        foreach ($member_person_ids as $user_id) {
+            $stmt_check_user->execute(['user_id' => $user_id]);
+            if (!$stmt_check_user->fetch()) {
+                error_log("Attempted to add non-existent user_id '{$user_id}' to group '{$group_id}'. Skipping.");
                 continue;
             }
 
             try {
-                $stmt_add_member->execute(['group_id' => $group_id, 'person_id' => $person_id, 'joined_at' => $member_joined_at]);
+                $stmt_add_member->execute(['group_id' => $group_id, 'user_id' => $user_id, 'joined_at' => $member_joined_at]);
             } catch (PDOException $e) {
                 if ($e->getCode() == '23000' || $e->getCode() == '23505') {
-                    error_log("Person_id '{$person_id}' already in group '{$group_id}' or other unique constraint: " . $e->getMessage());
+                    error_log("User_id '{$user_id}' already in group '{$group_id}' or other unique constraint: " . $e->getMessage());
                 } else {
                     throw $e;
                 }
@@ -164,7 +163,7 @@ try {
     }
 
     $pdo->commit();
-
+    
     // Success Response
     send_json_success([
         "message" => "Group created successfully.",

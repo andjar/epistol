@@ -299,23 +299,178 @@ function initializeEventListeners() {
     if (profileBtn) {
         profileBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            showCurrentUserProfile();
+            showProfileEditor();
         });
     }
 
-    function performSearch(query) {
-        console.log('Performing search for:', query);
-        // TODO: Implement search API call
-        // For now, just filter the current feed
-        const threads = document.querySelectorAll('.thread');
-        threads.forEach(thread => {
-            const text = thread.textContent.toLowerCase();
-            if (text.includes(query.toLowerCase())) {
-                thread.style.display = 'block';
-            } else {
-                thread.style.display = 'none';
+    async function performSearch(query, filters = {}) {
+        if (!query.trim()) {
+            loadFeed(); // Reset to normal feed if search is empty
+            return;
+        }
+        
+        try {
+            showGlobalLoader();
+            
+            // Build search URL with filters
+            const searchParams = new URLSearchParams({
+                q: query,
+                type: 'all',
+                limit: 50
+            });
+            
+            // Add date range filters
+            if (filters.dateFrom) searchParams.append('date_from', filters.dateFrom);
+            if (filters.dateTo) searchParams.append('date_to', filters.dateTo);
+            
+            // Add sender/recipient filters
+            if (filters.sender) searchParams.append('sender', filters.sender);
+            if (filters.recipient) searchParams.append('recipient', filters.recipient);
+            
+            // Add attachment filters
+            if (filters.hasAttachments !== undefined) {
+                searchParams.append('has_attachments', filters.hasAttachments ? '1' : '0');
             }
-        });
+            
+            // Add sent/received by me filters
+            if (filters.sentByMe) searchParams.append('sent_by_me', '1');
+            if (filters.receivedByMe) searchParams.append('received_by_me', '1');
+            
+            const response = await fetch(`api/v1/search.php?${searchParams.toString()}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                displaySearchResults(data.results, query, data.filters);
+            } else {
+                console.error('Search failed:', data.error);
+                alert('Search failed: ' + (data.message || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+            alert('Search failed. Please try again.');
+        } finally {
+            hideGlobalLoader();
+        }
+    }
+    
+    function displaySearchResults(results, query, filters = {}) {
+        if (!feedContainer) return;
+        
+        feedContainer.innerHTML = '';
+        
+        if (results.length === 0) {
+            feedContainer.innerHTML = `
+                <div class="no-results">
+                    <h3>No results found for "${query}"</h3>
+                    <p>Try searching with different terms or check your spelling.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Group results by type
+        const emails = results.filter(r => r.type === 'email');
+        const threads = results.filter(r => r.type === 'thread');
+        const persons = results.filter(r => r.type === 'person');
+        
+        let html = `<div class="search-results">
+            <h3>Search Results for "${query}"</h3>
+            <p>Found ${results.length} results</p>
+            ${Object.keys(filters).length > 0 ? `<p class="active-filters">Active filters: ${Object.entries(filters).filter(([k,v]) => v).map(([k,v]) => `${k}: ${v}`).join(', ')}</p>` : ''}
+        </div>`;
+        
+        // Display emails
+        if (emails.length > 0) {
+            html += `<div class="search-section">
+                <h4>Emails (${emails.length})</h4>
+                <div class="search-emails">`;
+            
+            emails.forEach(email => {
+                const highlightedSubject = email.subject_highlighted || email.subject || 'No subject';
+                const highlightedSender = email.sender_name_highlighted || email.sender_name || 'Unknown';
+                const highlightedBody = email.body_highlighted || (email.body_text ? email.body_text.substring(0, 150) + '...' : 'No content');
+                
+                html += `
+                    <div class="search-result-item email-result">
+                        <div class="result-header">
+                            <strong>${highlightedSender}</strong>
+                            <span class="result-date">${new Date(email.created_at).toLocaleDateString()}</span>
+                            ${email.attachment_count > 0 ? `<span class="attachment-indicator">📎 ${email.attachment_count}</span>` : ''}
+                        </div>
+                        <div class="result-subject">
+                            <strong>Subject:</strong> ${highlightedSubject}
+                        </div>
+                        <div class="result-preview">
+                            ${highlightedBody}
+                        </div>
+                        <div class="result-actions">
+                            <button onclick="showThread(${email.thread_id})">View Thread</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `</div></div>`;
+        }
+        
+        // Display threads
+        if (threads.length > 0) {
+            html += `<div class="search-section">
+                <h4>Threads (${threads.length})</h4>
+                <div class="search-threads">`;
+            
+            threads.forEach(thread => {
+                html += `
+                    <div class="search-result-item thread-result">
+                        <div class="result-header">
+                            <strong>${thread.subject || 'No subject'}</strong>
+                            <span class="result-date">${new Date(thread.last_activity_at).toLocaleDateString()}</span>
+                        </div>
+                        <div class="result-meta">
+                            <span>${thread.email_count} emails</span>
+                            <span>Created by: ${thread.creator_name || 'Unknown'}</span>
+                        </div>
+                        <div class="result-actions">
+                            <button onclick="showThread(${thread.id})">View Thread</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `</div></div>`;
+        }
+        
+        // Display persons
+        if (persons.length > 0) {
+            html += `<div class="search-section">
+                <h4>People (${persons.length})</h4>
+                <div class="search-persons">`;
+            
+            persons.forEach(person => {
+                html += `
+                    <div class="search-result-item person-result">
+                        <div class="result-header">
+                            <strong>${person.name || 'Unknown'}</strong>
+                            <span class="result-email">${person.email_address || 'No email'}</span>
+                        </div>
+                        <div class="result-meta">
+                            <span>${person.email_count} emails</span>
+                        </div>
+                        <div class="result-actions">
+                            <button onclick="showProfile(${person.id})">View Profile</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `</div></div>`;
+        }
+        
+        feedContainer.innerHTML = html;
+    }
+    
+    function showThread(threadId) {
+        window.location.href = `thread.php?id=${threadId}`;
     }
 
     function showNotifications() {
@@ -348,7 +503,7 @@ function initializeEventListeners() {
                 createGroupBtn.disabled = true;
                 createGroupBtn.textContent = 'Creating...';
                 showGlobalLoader(); // Show loader
-                await api.createGroup({ name: groupName });
+                await api.createGroup({ group_name: groupName });
                 newGroupNameInput.value = '';
                 await loadGroups();
             } catch (error) {
@@ -621,7 +776,7 @@ async function loadGroups() {
             // Populate groups list
             const groupDiv = document.createElement('div');
             groupDiv.className = 'group-item';
-            groupDiv.textContent = group.name; // Display group name
+            groupDiv.textContent = group.group_name; // Display group name
 
             const viewButton = document.createElement('button');
             viewButton.className = 'view-group-members-btn';
@@ -635,7 +790,7 @@ async function loadGroups() {
             // Populate group filter select
             const option = document.createElement('option');
             option.value = group.group_id;
-            option.textContent = group.name;
+            option.textContent = group.group_name;
             groupFeedFilterSelect.appendChild(option);
             });
         }

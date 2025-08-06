@@ -26,8 +26,7 @@ window.renderEmailAsPost = function(email, threadSubject, currentUserId, isFirst
         recipientDisplay = `${email.recipients[0].name} + ${email.recipients.length - 1} more`;
     }
 
-    // User status for this email (placeholder logic)
-    // You'd fetch this from email.user_specific_status or similar
+    // User status for this email
     const userStatus = email.user_specific_statuses && email.user_specific_statuses.find(s => s.user_id === currentUserId)?.status || 'default';
     const statusLabels = {
         'read': 'Read',
@@ -67,6 +66,23 @@ window.renderEmailAsPost = function(email, threadSubject, currentUserId, isFirst
             <div class="post-content">
                 ${isFirstInThread && threadSubject ? `<h4 class="post-content-subject">${threadSubject}</h4>` : ''}
                 ${email.body_html || `<p>${email.body_preview || 'No content'}</p>`}
+                ${email.attachments && email.attachments.length > 0 ? `
+                    <div class="email-attachments">
+                        <h5>Attachments (${email.attachments.length})</h5>
+                        <div class="attachment-list">
+                            ${email.attachments.map(attachment => `
+                                <div class="attachment-item">
+                                    <span class="attachment-icon">📎</span>
+                                    <span class="attachment-name">${attachment.filename}</span>
+                                    <span class="attachment-size">${formatFileSize(attachment.filesize_bytes)}</span>
+                                    <button class="attachment-download-btn" onclick="downloadAttachment(${attachment.id}, '${attachment.filename}')">
+                                        Download
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
             </div>
 
             <div class="post-footer">
@@ -131,6 +147,30 @@ window.renderThread = function(threadData, threadSubject, currentUserId) {
     threadContainer.appendChild(postsContainer);
     return threadContainer;
 };
+
+/**
+ * Formats a file size in bytes to a human-readable string
+ */
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+/**
+ * Downloads an attachment
+ */
+function downloadAttachment(attachmentId, filename) {
+    // Create a temporary link to download the attachment
+    const link = document.createElement('a');
+    link.href = `api/v1/download_attachment.php?id=${attachmentId}`;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 
 /**
  * Formats a timestamp into a relative time string (e.g., "2 hours ago")

@@ -12,13 +12,13 @@
  * POST
  *
  * Input Parameters (JSON Body):
- *  - post_id (integer, required): The ID of the post (email) for which to set the status.
+ *  - email_id (integer, required): The ID of the email for which to set the status.
  *  - user_id (integer, required): The ID of the user for whom this status applies.
  *  - status (string, required): The status to set. Allowed values: 'read', 'follow-up', 'important-info', 'unread'.
  *
  * Example JSON Input:
  * {
- *   "post_id": 123,
+ *   "email_id": 123,
  *   "user_id": 456,
  *   "status": "read"
  * }
@@ -43,10 +43,10 @@
  *                   {"status": "error", "message": "An unexpected error occurred: Specific details."}
  *
  * Database Interaction:
- * - Checks if a record exists in 'post_statuses' for the given 'post_id' and 'user_id'.
- * - If exists, UPDATEs the 'status' and 'updated_at' timestamp for that record.
- * - If not exists, INSERTs a new record with 'post_id', 'user_id', 'status', 'created_at', and 'updated_at'.
- * - Assumes 'post_id' links to an email's ID and 'user_id' links to a person's ID.
+ * - Checks if a record exists in 'email_statuses' for the given 'email_id' and 'user_id'.
+ * - If exists, UPDATEs the 'status' for that record.
+ * - If not exists, INSERTs a new record with 'email_id', 'user_id', 'status', and 'created_at'.
+ * - Assumes 'email_id' links to an email's ID and 'user_id' links to a user's ID.
  */
 
 require_once __DIR__ . '/../../src/helpers.php'; // Corrected path
@@ -69,7 +69,7 @@ if ($data === null && json_last_error() !== JSON_ERROR_NONE && empty($GLOBALS['m
 }
 
 // Validate input parameters
-$email_id = $data['email_id'] ?? null;
+$email_id = $data['email_id'] ?? $data['post_id'] ?? null; // Accept both email_id and post_id
 $user_id = $data['user_id'] ?? null; // Assuming user_id is integer as per validation
 $status = $data['status'] ?? null;
 
@@ -101,10 +101,9 @@ try {
 
     if ($existing_status) {
         // Update existing status
-        $stmt_update = $pdo->prepare("UPDATE email_statuses SET status = :status, updated_at = :updated_at WHERE id = :id");
+        $stmt_update = $pdo->prepare("UPDATE email_statuses SET status = :status WHERE id = :id");
         $stmt_update->bindParam(':status', $status, PDO::PARAM_STR);
         $stmt_update->bindParam(':id', $existing_status['id'], PDO::PARAM_INT);
-        $stmt_update->bindValue(':updated_at', date('Y-m-d H:i:s'));
 
         if ($stmt_update->execute()) {
             send_json_success(['message' => 'Post status updated successfully.']); // Defaults to 200 OK
@@ -113,13 +112,12 @@ try {
         }
     } else {
         // Insert new status
-        $stmt_insert = $pdo->prepare("INSERT INTO email_statuses (email_id, user_id, status, created_at, updated_at) VALUES (:email_id, :user_id, :status, :created_at, :updated_at)");
+        $stmt_insert = $pdo->prepare("INSERT INTO email_statuses (email_id, user_id, status, created_at) VALUES (:email_id, :user_id, :status, :created_at)");
         $stmt_insert->bindParam(':email_id', $email_id, PDO::PARAM_INT);
         $stmt_insert->bindParam(':user_id', $user_id, PDO::PARAM_INT);
         $stmt_insert->bindParam(':status', $status, PDO::PARAM_STR);
         $current_time = date('Y-m-d H:i:s');
         $stmt_insert->bindParam(':created_at', $current_time);
-        $stmt_insert->bindParam(':updated_at', $current_time);
 
         if ($stmt_insert->execute()) {
             send_json_success(['message' => 'Post status created successfully.', 'id' => $pdo->lastInsertId()], 201);
