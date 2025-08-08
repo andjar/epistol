@@ -196,6 +196,8 @@ function createThreadElement(thread) {
 function createEmailElement(email, isFirstPost = false) {
     const emailElement = document.createElement('div');
     emailElement.className = `post-card ${isFirstPost ? 'is-first-post' : 'is-reply-post'}`;
+    emailElement.dataset.emailId = email.email_id;
+    emailElement.dataset.status = (email.status || 'read');
     if (email.status === 'unread') {
         emailElement.classList.add('email-unread');
     }
@@ -369,47 +371,66 @@ function createEmailElement(email, isFirstPost = false) {
     replyBtn.dataset.sender = email.sender_email || '';
     actions.appendChild(replyBtn);
     
-    // Reply All button
-    const replyAllBtn = document.createElement('button');
-    replyAllBtn.className = 'action-btn reply-all-to-email-btn';
-    replyAllBtn.textContent = 'Reply All';
-    replyAllBtn.dataset.emailId = email.email_id;
-    replyAllBtn.dataset.subject = email.subject || '';
-    replyAllBtn.dataset.allRecipients = email.sender_email || '';
-    actions.appendChild(replyAllBtn);
-    
-    // Forward button
-    const forwardBtn = document.createElement('button');
-    forwardBtn.className = 'action-btn forward-email-btn';
-    forwardBtn.textContent = 'Forward';
-    forwardBtn.dataset.subject = email.subject || '';
-    forwardBtn.dataset.originalSender = email.sender_name || email.sender_email || '';
-    forwardBtn.dataset.originalDate = email.timestamp ? new Date(email.timestamp).toLocaleString() : '';
-    forwardBtn.dataset.originalBody = email.body_text || '';
-    actions.appendChild(forwardBtn);
+    // Reply All / Forward are moved to overflow status popover to reduce emphasis
     
     footer.appendChild(actions);
     
-    // Add status selector
+    // Icon-based status controls with overflow
     const statusContainer = document.createElement('div');
-    statusContainer.className = 'post-status-selector-container';
-    
-    const statusSelect = document.createElement('select');
-    statusSelect.className = 'minimalist-select post-status-select';
-    statusSelect.dataset.emailId = email.email_id;
-    
-    const statuses = ['unread', 'read', 'follow-up', 'important'];
-    statuses.forEach(status => {
-        const option = document.createElement('option');
-        option.value = status;
-        option.textContent = status.charAt(0).toUpperCase() + status.slice(1);
-        if (email.status === status) {
-            option.selected = true;
-        }
-        statusSelect.appendChild(option);
-    });
-    
-    statusContainer.appendChild(statusSelect);
+    statusContainer.className = 'post-status-selector-container status-controls-container';
+
+    const controls = document.createElement('div');
+    controls.className = 'status-controls';
+    const currentStatus = (email.status || 'read').toLowerCase();
+
+    // Read/Unread toggle
+    const readBtn = document.createElement('button');
+    readBtn.className = 'status-icon-btn status-toggle-read';
+    readBtn.title = currentStatus === 'unread' ? 'Mark as read' : 'Mark as unread';
+    readBtn.setAttribute('aria-pressed', String(currentStatus === 'unread'));
+    readBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 6l8 5 8-5v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z"/></svg>';
+    controls.appendChild(readBtn);
+
+    // Important star
+    const starBtn = document.createElement('button');
+    starBtn.className = 'status-icon-btn status-toggle-important' + (currentStatus === 'important' ? ' active' : '');
+    starBtn.title = currentStatus === 'important' ? 'Unmark important' : 'Mark as important';
+    starBtn.setAttribute('aria-pressed', String(currentStatus === 'important'));
+    starBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
+    controls.appendChild(starBtn);
+
+    // Follow-up flag
+    const flagBtn = document.createElement('button');
+    flagBtn.className = 'status-icon-btn status-toggle-followup' + (currentStatus === 'follow-up' ? ' active' : '');
+    flagBtn.title = currentStatus === 'follow-up' ? 'Clear follow-up' : 'Mark for follow-up';
+    flagBtn.setAttribute('aria-pressed', String(currentStatus === 'follow-up'));
+    flagBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4h9l-1 3 1 3H6v10H4V4h2z"/></svg>';
+    controls.appendChild(flagBtn);
+
+    // Overflow button
+    const moreBtn = document.createElement('button');
+    moreBtn.className = 'status-icon-btn status-overflow';
+    moreBtn.title = 'More';
+    moreBtn.setAttribute('aria-haspopup', 'true');
+    moreBtn.setAttribute('aria-expanded', 'false');
+    moreBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg>';
+    controls.appendChild(moreBtn);
+
+    const popover = document.createElement('div');
+    popover.className = 'status-popover';
+    popover.setAttribute('role', 'menu');
+    popover.innerHTML = `
+        <button class="status-menu-item" role="menuitemradio" data-status="read">Mark as Read</button>
+        <button class="status-menu-item" role="menuitemradio" data-status="unread">Mark as Unread</button>
+        <button class="status-menu-item" role="menuitemradio" data-status="follow-up">Follow-up</button>
+        <button class="status-menu-item" role="menuitemradio" data-status="important">Important</button>
+        <div class="status-menu-sep"></div>
+        <button class="status-menu-item reply-all-to-email-btn" role="menuitem" data-email-id="${email.email_id}" data-subject="${email.subject || ''}" data-all-recipients="${email.sender_email || ''}">Reply All</button>
+        <button class="status-menu-item forward-email-btn" role="menuitem" data-subject="${email.subject || ''}" data-original-sender="${email.sender_name || email.sender_email || ''}" data-original-date="${email.timestamp ? new Date(email.timestamp).toLocaleString() : ''}" data-original-body="${email.body_text || ''}">Forward</button>
+    `;
+
+    statusContainer.appendChild(controls);
+    statusContainer.appendChild(popover);
     footer.appendChild(statusContainer);
     
     emailElement.appendChild(footer);
@@ -636,9 +657,77 @@ feedContainer.addEventListener('click', (event) => {
         } else {
             console.warn('Author link clicked, but no person-id found.', event.target);
         }
+    } else if (target.closest('.status-toggle-read')) {
+        const card = target.closest('.post-card');
+        const emailId = card?.dataset.emailId;
+        if (emailId) {
+            const isUnread = card.classList.contains('email-unread');
+            requestSetStatus(emailId, isUnread ? 'read' : 'unread', card);
+        }
+    } else if (target.closest('.status-toggle-important')) {
+        const card = target.closest('.post-card');
+        const emailId = card?.dataset.emailId;
+        if (emailId) {
+            const current = getCurrentStatusFromCard(card);
+            requestSetStatus(emailId, current === 'important' ? 'read' : 'important', card);
+        }
+    } else if (target.closest('.status-toggle-followup')) {
+        const card = target.closest('.post-card');
+        const emailId = card?.dataset.emailId;
+        if (emailId) {
+            const current = getCurrentStatusFromCard(card);
+            requestSetStatus(emailId, current === 'follow-up' ? 'read' : 'follow-up', card);
+        }
+    } else if (target.closest('.status-overflow')) {
+        const container = target.closest('.status-controls-container');
+        const pop = container?.querySelector('.status-popover');
+        if (pop) {
+            const expanded = pop.classList.toggle('open');
+            target.setAttribute('aria-expanded', String(expanded));
+        }
+    } else if (target.closest('.status-menu-item') && target.dataset.status) {
+        const card = target.closest('.post-card');
+        const emailId = card?.dataset.emailId;
+        if (emailId) {
+            requestSetStatus(emailId, target.dataset.status, card);
+        }
     }
     // Note: Status change is handled by a 'change' event listener below, not 'click'.
 });
+
+function getCurrentStatusFromCard(card) {
+    return (card?.dataset.status || 'read').toLowerCase();
+}
+
+async function requestSetStatus(emailId, newStatus, cardEl) {
+    const currentUserId = 1;
+    try {
+        showGlobalLoader();
+        await api.setPostStatus(emailId, currentUserId, newStatus);
+        if (cardEl) updateEmailCardStatusUI(cardEl, newStatus);
+        await loadFeed();
+    } catch (e) {
+        console.error('Failed to set status', e);
+        alert('Failed to update status.');
+    } finally {
+        hideGlobalLoader();
+    }
+}
+
+function updateEmailCardStatusUI(card, status) {
+    card.dataset.status = status;
+    if (status === 'unread') {
+        card.classList.add('email-unread');
+    } else {
+        card.classList.remove('email-unread');
+    }
+    const container = card.querySelector('.status-controls-container');
+    if (!container) return;
+    const imp = container.querySelector('.status-toggle-important');
+    const flag = container.querySelector('.status-toggle-followup');
+    if (imp) imp.classList.toggle('active', status === 'important');
+    if (flag) flag.classList.toggle('active', status === 'follow-up');
+}
 
 // Event delegation for post status changes
 feedContainer.addEventListener('change', async (event) => {

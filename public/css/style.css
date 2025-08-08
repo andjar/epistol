@@ -754,6 +754,21 @@ body.reading-mode .main-container { padding-top: 60px; }
     align-items: center;
 }
 
+/* Icon-based status controls */
+.status-controls { display: inline-flex; gap: 6px; }
+.status-icon-btn { background: transparent; border: 1px solid var(--card-border-color); color: var(--text-color-secondary); width: 30px; height: 30px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color .15s ease, border-color .15s ease, color .15s ease; }
+.status-icon-btn:hover { background: var(--bg-hover); border-color: var(--border-hover); color: var(--text-color-primary); }
+.status-icon-btn.active { color: var(--link-color); border-color: var(--link-color); background: rgba(0,122,255,0.06); }
+/* Ensure SVG icons inside the circular buttons render with fixed size */
+.status-icon-btn svg { width: 18px; height: 18px; display: block; flex-shrink: 0; }
+
+.status-controls-container { position: relative; }
+.status-popover { position: absolute; right: 0; top: 36px; background: #fff; border: 1px solid var(--card-border-color); border-radius: var(--border-radius-sm); box-shadow: var(--shadow-md); padding: 6px; display: none; min-width: 180px; z-index: 20; }
+.status-popover.open { display: block; }
+.status-menu-item { display: block; width: 100%; text-align: left; background: transparent; border: none; padding: 8px 10px; border-radius: 6px; color: var(--text-color-primary); font-size: .9em; cursor: pointer; }
+.status-menu-item:hover { background: var(--bg-hover); }
+.status-menu-sep { height: 1px; background: var(--post-separator-color); margin: 6px 0; }
+
 .post-status-select {
     background-color: var(--bg-subtle);
     border: 1px solid var(--border-color);
