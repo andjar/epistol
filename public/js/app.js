@@ -52,6 +52,20 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Set up event listeners
     setupEventListeners();
+
+    // Left sidebar: toggle create group section via plus button
+    const toggleCreateBtn = document.getElementById('toggle-create-group');
+    const createSection = document.getElementById('create-group-section');
+    if (toggleCreateBtn && createSection) {
+        toggleCreateBtn.addEventListener('click', () => {
+            const isHidden = createSection.style.display === 'none';
+            createSection.style.display = isHidden ? '' : 'none';
+            toggleCreateBtn.setAttribute('aria-expanded', String(isHidden));
+        });
+        // Start hidden by default for a cleaner left sidebar
+        createSection.style.display = 'none';
+        toggleCreateBtn.setAttribute('aria-expanded', 'false');
+    }
 });
 
 /**
@@ -67,12 +81,106 @@ function createThreadElement(thread) {
     const postsContainer = document.createElement('div');
     postsContainer.className = 'posts-container';
     
-    // Add emails in the thread as post cards
+    // Add emails in the thread as post cards with collapse for many replies
     if (thread.emails && thread.emails.length > 0) {
-        thread.emails.forEach((email, index) => {
-            const emailElement = createEmailElement(email, index === 0);
-            postsContainer.appendChild(emailElement);
-        });
+        const totalEmails = thread.emails.length;
+        const firstEmail = thread.emails[0];
+        // Always render the first email as the main post
+        postsContainer.appendChild(createEmailElement(firstEmail, true));
+
+        const replies = thread.emails.slice(1);
+        const unreadReplies = replies.filter(r => r.status === 'unread');
+        const readReplies = replies.filter(r => r.status !== 'unread');
+        const replyCount = replies.length;
+
+        if (replyCount > 3) {
+            // Collapsed summary bar
+            const repliesSummary = document.createElement('div');
+            repliesSummary.className = 'replies-summary';
+
+            // Build a compact breadcrumb of participants (up to 3 unique names)
+            const uniqueNames = Array.from(new Set(replies.map(r => r.sender_name).filter(Boolean)));
+            const shownNames = uniqueNames.slice(0, 3);
+            const namesText = shownNames.join(', ') + (uniqueNames.length > 3 ? ` +${uniqueNames.length - 3}` : '');
+            const label = document.createElement('button');
+            label.type = 'button';
+            label.className = 'replies-summary-btn';
+            const hiddenCount = readReplies.length;
+            label.setAttribute('aria-expanded', 'false');
+            label.innerHTML = `
+                <span class="chevron" aria-hidden="true">▾</span>
+                <span class="label-text">${hiddenCount > 0 ? `Show ${hiddenCount} more replies` : 'Replies'}</span>
+                ${namesText ? `<span class="names">${namesText}</span>` : ''}
+            `;
+            repliesSummary.appendChild(label);
+
+            // Participant initials chips
+            const chips = document.createElement('div');
+            chips.className = 'participants-chips';
+            shownNames.forEach((n) => {
+                const chip = document.createElement('div');
+                chip.className = 'participant-chip';
+                chip.textContent = (n || '?').charAt(0).toUpperCase();
+                chip.style.backgroundColor = seedColorFromString(n || '');
+                chips.appendChild(chip);
+            });
+            repliesSummary.appendChild(chips);
+
+            // Collapsible replies container
+            const repliesCollapsible = document.createElement('div');
+            repliesCollapsible.className = 'replies-collapsible';
+            repliesCollapsible.hidden = true;
+
+            readReplies.forEach((email) => {
+                const emailElement = createEmailElement(email, false);
+                repliesCollapsible.appendChild(emailElement);
+            });
+
+            // Toggle behavior
+            label.addEventListener('click', () => {
+                const isHidden = repliesCollapsible.hidden;
+                repliesCollapsible.hidden = !isHidden;
+                label.setAttribute('aria-expanded', String(isHidden));
+                label.querySelector('.chevron').textContent = isHidden ? '▴' : '▾';
+                const textEl = label.querySelector('.label-text');
+                if (textEl) {
+                    textEl.textContent = hiddenCount > 0 ? `${isHidden ? 'Hide' : 'Show'} ${hiddenCount} more replies` : `${isHidden ? 'Hide' : 'Show'} replies`;
+                }
+                repliesSummary.classList.toggle('expanded', isHidden);
+            });
+            label.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    label.click();
+                }
+            });
+
+            // Wrap the replies area for a subtle background stripe
+            const repliesRegion = document.createElement('div');
+            repliesRegion.className = 'replies-region';
+            repliesRegion.appendChild(repliesSummary);
+            repliesRegion.appendChild(repliesCollapsible);
+            postsContainer.appendChild(repliesRegion);
+            
+            // Always show unread replies at the bottom even when collapsed
+            if (unreadReplies.length > 0) {
+                const unreadWrapper = document.createElement('div');
+                unreadWrapper.className = 'unread-replies';
+                unreadReplies.forEach((email) => {
+                    const emailElement = createEmailElement(email, false);
+                    unreadWrapper.appendChild(emailElement);
+                });
+                repliesRegion.appendChild(unreadWrapper);
+            }
+        } else {
+            // Render all replies inline when there are few
+            const repliesRegion = document.createElement('div');
+            repliesRegion.className = 'replies-region';
+            replies.forEach((email) => {
+                repliesRegion.appendChild(createEmailElement(email, false));
+            });
+            postsContainer.appendChild(repliesRegion);
+        }
     }
     
     threadElement.appendChild(postsContainer);
@@ -101,6 +209,7 @@ function createEmailElement(email, isFirstPost = false) {
     avatar.className = 'post-avatar';
     const senderName = email.sender_name || email.sender_email || 'Unknown';
     avatar.textContent = senderName.charAt(0).toUpperCase();
+    avatar.style.backgroundColor = seedColorFromString(email.sender_email || email.sender_name || '');
     header.appendChild(avatar);
     
     // Create author meta
@@ -117,6 +226,32 @@ function createEmailElement(email, isFirstPost = false) {
     authorName.href = '#';
     authorName.dataset.personId = email.sender_person_id || '';
     authorLine.appendChild(authorName);
+
+    // Recipient display (Sender ▸ Recipient)
+    try {
+        let recipientDisplay = '';
+        if (email.group_name) {
+            recipientDisplay = email.group_name;
+        } else if (Array.isArray(email.recipients) && email.recipients.length > 0) {
+            const firstRecipient = email.recipients[0];
+            recipientDisplay = firstRecipient.name || firstRecipient.email_address || 'Recipients';
+            if (email.recipients.length > 1) {
+                recipientDisplay += ` + ${email.recipients.length - 1} more`;
+            }
+        }
+        if (recipientDisplay) {
+            const sep = document.createElement('span');
+            sep.className = 'recipient-separator';
+            sep.textContent = '▸';
+            const recip = document.createElement('span');
+            recip.className = 'recipient-name';
+            recip.textContent = recipientDisplay;
+            authorLine.appendChild(sep);
+            authorLine.appendChild(recip);
+        }
+    } catch (e) {
+        console.warn('Failed to render recipient display', e);
+    }
     
     authorMeta.appendChild(authorLine);
     
@@ -153,11 +288,66 @@ function createEmailElement(email, isFirstPost = false) {
         content.appendChild(subject);
     }
     
-    // Add email body
-    if (email.body_text) {
+    // Add email body (prefer HTML if provided)
+    if (email.body_html) {
+        const body = document.createElement('div');
+        body.innerHTML = email.body_html;
+        content.appendChild(body);
+    } else if (email.body_text) {
         const body = document.createElement('p');
         body.textContent = email.body_text;
         content.appendChild(body);
+    }
+
+    // Expand/Collapse inline for clamped content
+    const expandBtn = document.createElement('button');
+    expandBtn.className = 'expand-toggle';
+    expandBtn.type = 'button';
+    expandBtn.textContent = 'Expand';
+    expandBtn.setAttribute('aria-expanded', 'false');
+    expandBtn.addEventListener('click', () => {
+        const expanded = content.classList.toggle('expanded');
+        expandBtn.textContent = expanded ? 'Collapse' : 'Expand';
+        expandBtn.setAttribute('aria-expanded', String(expanded));
+    });
+    content.appendChild(expandBtn);
+
+    // Attachments list
+    if (Array.isArray(email.attachments) && email.attachments.length > 0) {
+        const wrap = document.createElement('div');
+        wrap.className = 'email-attachments';
+        const title = document.createElement('h5');
+        title.textContent = `Attachments (${email.attachments.length})`;
+        wrap.appendChild(title);
+        const list = document.createElement('div');
+        list.className = 'attachment-list';
+        email.attachments.forEach(att => {
+            const item = document.createElement('div');
+            item.className = 'attachment-item';
+            const icon = document.createElement('span');
+            icon.className = 'attachment-icon';
+            icon.textContent = '📎';
+            const name = document.createElement('span');
+            name.className = 'attachment-name';
+            name.textContent = att.filename;
+            const size = document.createElement('span');
+            size.className = 'attachment-size';
+            size.textContent = formatFileSize(att.filesize_bytes || 0);
+            const btn = document.createElement('button');
+            btn.className = 'attachment-download-btn';
+            btn.textContent = 'Download';
+            btn.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                downloadAttachment(att.id, att.filename);
+            });
+            item.appendChild(icon);
+            item.appendChild(name);
+            item.appendChild(size);
+            item.appendChild(btn);
+            list.appendChild(item);
+        });
+        wrap.appendChild(list);
+        content.appendChild(wrap);
     }
     
     emailElement.appendChild(content);
@@ -225,6 +415,24 @@ function createEmailElement(email, isFirstPost = false) {
     emailElement.appendChild(footer);
     
     return emailElement;
+}
+
+// Generate a pastel color from a string (e.g., email or name) for avatar backgrounds
+function seedColorFromString(input) {
+    try {
+        let hash = 0;
+        for (let i = 0; i < input.length; i++) {
+            hash = input.charCodeAt(i) + ((hash << 5) - hash);
+            hash = hash & hash;
+        }
+        // Map hash to HSL
+        const hue = Math.abs(hash) % 360;
+        const saturation = 65; // percentage
+        const lightness = 55; // percentage
+        return `hsl(${hue} ${saturation}% ${lightness}%)`;
+    } catch (e) {
+        return '#6B7280';
+    }
 }
 
 /**
@@ -485,6 +693,8 @@ const searchBtn = document.getElementById('search-btn');
 const notificationsBtn = document.getElementById('notifications-btn');
 const groupsBtn = document.getElementById('groups-btn');
 const profileBtn = document.getElementById('profile-btn');
+const compactToggleBtn = document.getElementById('toggle-compact-mode-btn');
+const readingToggleBtn = document.getElementById('toggle-reading-mode-btn');
 
 // Search functionality
 if (searchBtn && searchField) {
@@ -524,6 +734,24 @@ if (profileBtn) {
     profileBtn.addEventListener('click', (e) => {
         e.preventDefault();
         showProfileEditor();
+    });
+}
+
+// Compact mode toggle
+if (compactToggleBtn) {
+    compactToggleBtn.addEventListener('click', () => {
+        document.body.classList.toggle('compact-mode');
+        const pressed = document.body.classList.contains('compact-mode');
+        compactToggleBtn.setAttribute('aria-pressed', String(pressed));
+    });
+}
+
+// Reading mode toggle
+if (readingToggleBtn) {
+    readingToggleBtn.addEventListener('click', () => {
+        document.body.classList.toggle('reading-mode');
+        const pressed = document.body.classList.contains('reading-mode');
+        readingToggleBtn.setAttribute('aria-pressed', String(pressed));
     });
 }
 
@@ -611,6 +839,7 @@ function displaySearchResults(results, query, filters = {}) {
     if (!feedContainer) return;
     
     feedContainer.innerHTML = '';
+    renderActiveFilters(filters);
     
     if (results.length === 0) {
         feedContainer.innerHTML = `
@@ -721,6 +950,45 @@ function displaySearchResults(results, query, filters = {}) {
     }
     
     feedContainer.innerHTML = html;
+}
+
+function renderActiveFilters(filters = {}) {
+    const bar = document.getElementById('active-filters-bar');
+    if (!bar) return;
+    const entries = Object.entries(filters).filter(([k, v]) => v && String(v).length);
+    if (entries.length === 0) {
+        bar.innerHTML = '';
+        return;
+    }
+    bar.innerHTML = entries.map(([k, v]) => {
+        const label = `${k.replace(/_/g, ' ')}: ${Array.isArray(v) ? v.join(', ') : v}`;
+        return `<span class="filter-chip" data-key="${k}">${label}<button aria-label="Remove ${k}" onclick="removeActiveFilter('${k}')">×</button></span>`;
+    }).join('');
+}
+
+window.removeActiveFilter = function (key) {
+    // Clear matching UI control if present
+    const map = {
+        'date_from': '#date-from',
+        'date_to': '#date-to',
+        'sender': '#sender-filter',
+        'recipient': '#recipient-filter',
+        'has_attachments': '#filter-has-attachments',
+        'sent_by_me': '#filter-sent-by-me',
+        'received_by_me': '#filter-received-by-me',
+    };
+    const sel = map[key];
+    if (sel) {
+        const el = document.querySelector(sel);
+        if (el) {
+            if (el.type === 'checkbox') el.checked = false; else el.value = '';
+        }
+    }
+    // Re-apply filters via AdvancedFilters
+    if (window.advancedFilters) {
+        delete window.advancedFilters.currentFilters[key];
+        window.advancedFilters.applyFilters();
+    }
 }
     
 function showThread(threadId) {
@@ -1128,6 +1396,7 @@ const timelineContainer = document.getElementById('timeline-container');
 if (mainContent && timelineHandle && timelineContainer) {
     let timelineDateElement = null;
     let timelineDots = [];
+    const monthMarkersContainer = document.getElementById('timeline-month-markers');
     
     // Create timeline dots for different dates
     function createTimelineDots() {
@@ -1164,6 +1433,19 @@ if (mainContent && timelineHandle && timelineContainer) {
                 jumpToDate(dateString);
             });
         });
+
+        // Month markers (approximate positions)
+        if (monthMarkersContainer) {
+            monthMarkersContainer.innerHTML = '';
+            const months = Array.from(new Set(sortedDates.map(d => new Date(d).toLocaleString('en-US', { month: 'short', year: 'numeric' }))));
+            months.forEach((m, idx) => {
+                const marker = document.createElement('div');
+                marker.className = 'timeline-month';
+                marker.textContent = m;
+                marker.style.top = `${(idx / (months.length - 1)) * 80 + 10}%`;
+                monthMarkersContainer.appendChild(marker);
+            });
+        }
     }
     
     function jumpToDate(dateString) {

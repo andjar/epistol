@@ -13,7 +13,7 @@
 
     <div class="main-container">
         <aside id="left-sidebar" class="sidebar">
-            <h2>Groups</h2>
+            <h2>Groups <button id="toggle-create-group" class="icon-btn" title="Create Group" aria-expanded="false">+</button></h2>
             <div id="groups-list-container">
                 <!-- Groups will be loaded here -->
             </div>
@@ -42,6 +42,7 @@
         </aside>
 
         <?php include 'common/feed.php'; ?>
+        <div id="active-filters-bar" class="active-filters-bar" aria-live="polite"></div>
 
         <?php include 'common/timeline.php'; ?>
 

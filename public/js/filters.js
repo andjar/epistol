@@ -48,6 +48,7 @@ class AdvancedFilters {
         // Initialize event listeners only if elements exist
         if (this.keywordInput || this.senderInput || this.recipientInput) {
             this.initializeEventListeners();
+            this.initializeAccordion();
         }
     }
 
@@ -373,6 +374,11 @@ class AdvancedFilters {
         } else {
             console.warn('loadFeed function not available');
         }
+
+        // Render active filter chips under the top bar when available
+        if (typeof window.renderActiveFilters === 'function') {
+            window.renderActiveFilters(apiParams);
+        }
     }
 
     convertFiltersToApiParams() {
@@ -568,6 +574,36 @@ class AdvancedFilters {
         } catch (error) {
             console.error('Error saving filter presets:', error);
         }
+    }
+
+    // Sidebar accordion behavior for right sidebar filter sections
+    initializeAccordion() {
+        const sections = Array.from(document.querySelectorAll('#right-sidebar .filter-section'));
+        if (sections.length === 0) return;
+
+        sections.forEach((section, index) => {
+            const header = section.querySelector('h3');
+            if (!header) return;
+            header.classList.add('accordion-header');
+            header.setAttribute('role', 'button');
+            header.setAttribute('tabindex', '0');
+
+            const initiallyExpanded = index === 0; // Keep first (Search) open by default
+            section.classList.toggle('collapsed', !initiallyExpanded);
+            header.setAttribute('aria-expanded', String(initiallyExpanded));
+
+            const toggle = () => {
+                const isCollapsed = section.classList.toggle('collapsed');
+                header.setAttribute('aria-expanded', String(!isCollapsed));
+            };
+            header.addEventListener('click', toggle);
+            header.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggle();
+                }
+            });
+        });
     }
 }
 

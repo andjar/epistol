@@ -33,6 +33,14 @@
     --secondary-bg: #F8F9FA;
     --success-color: #10B981;
     --danger-color: #EF4444;
+    /* Aliases for consistency across components */
+    --text-primary: var(--text-color-primary);
+    --text-secondary: var(--text-color-secondary);
+    --text-muted: var(--text-color-tertiary);
+    --bg-subtle: #F7F8FA;
+    --bg-hover: rgba(0, 0, 0, 0.035);
+    --border-hover: #C9CCD1;
+    --primary-color-alpha: rgba(0, 122, 255, 0.2);
 }
 
 /* === Global Reset & Base Styles === */
@@ -44,12 +52,12 @@
 
 body {
     font-family: var(--font-family-sans);
-    line-height: 1.5; /* Adjusted for post readability */
+    line-height: 1.55; /* Improved readability */
     margin: 0;
     padding: 0; 
     background-color: var(--body-bg);
     color: var(--text-color-primary);
-    font-size: 15px; /* Common base for social UI */
+    font-size: 16px; /* Standard readable base */
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -289,6 +297,19 @@ img {
     justify-content: center; /* Center the feed */
 }
 
+/* Compact mode reduces spacing and font sizes slightly */
+body.compact-mode #main-content { padding: 10px; }
+body.compact-mode .thread { margin-bottom: 8px; }
+body.compact-mode .post-card { padding: 10px 12px; }
+body.compact-mode .post-card.is-reply-post { padding: 5px 8px; }
+body.compact-mode .post-content p { -webkit-line-clamp: 4; }
+
+/* Reading mode hides sidebars and timeline for distraction-free reading */
+body.reading-mode #left-sidebar,
+body.reading-mode #right-sidebar,
+body.reading-mode #timeline-container { display: none !important; }
+body.reading-mode .main-container { padding-top: 60px; }
+
 /* === Timeline Styling (Google Photos inspired) === */
 #timeline-container {
     position: fixed;
@@ -356,6 +377,22 @@ img {
     opacity: 1;
 }
 
+/* Support for JS-inserted timeline date tooltip */
+.timeline-date {
+    position: absolute;
+    right: 30px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+.timeline-date.show { opacity: 1; }
+
 /* Timeline dots for different dates */
 .timeline-dot {
     position: absolute;
@@ -368,6 +405,8 @@ img {
     cursor: pointer;
     transition: all 0.2s ease;
 }
+#timeline-month-markers { position: absolute; right: 26px; top: 10%; bottom: 10%; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; pointer-events: none; }
+.timeline-month { font-size: 11px; color: var(--text-color-tertiary); white-space: nowrap; transform: translateY(-50%); position: absolute; right: 0; }
 
 .timeline-dot:hover {
     transform: translateX(-50%) scale(1.5);
@@ -375,7 +414,7 @@ img {
 }
 
 #feed-container {
-    max-width: 800px; /* Increased max-width for better centering */
+    max-width: 820px; /* Slightly wider for better scan */
     width: 100%;
     margin: 0 auto;
     /* No specific background needed if #main-content has it */
@@ -388,7 +427,7 @@ img {
     background-color: var(--card-bg);
     border: 1px solid var(--card-border-color);
     border-radius: var(--border-radius-md);
-    margin-bottom: 12px; /* Restored original spacing */
+    margin-bottom: 10px; /* Slightly tighter between threads */
     box-shadow: var(--shadow-sm);
     transition: all 0.2s ease;
     overflow: hidden; /* Ensure clean edges */
@@ -439,19 +478,105 @@ img {
 
 /* Reply posts get indented styling - Facebook comment style */
 .post-card.is-reply-post {
-    margin-left: 40px; /* Increased indent for replies */
+    margin-left: 28px; /* 24–28px indent for replies */
     border-left: 3px solid var(--border-color);
-    background-color: var(--bg-subtle);
+    background-color: rgba(255,255,255,0.6); /* More transparent than parent */
     font-size: 0.9em; /* Smaller text for replies */
-    padding: 8px 12px; /* Smaller padding for replies */
-    margin-top: 4px;
-    margin-bottom: 4px;
+    padding: 6px 10px; /* Further reduced padding for replies */
+    margin-top: 2px;
+    margin-bottom: 2px;
     border-radius: 0 8px 8px 0; /* Rounded right corners only */
+}
+
+/* Subtle vertical connector for reply stacks */
+.posts-container { position: relative; }
+.post-card.is-reply-post { position: relative; }
+.post-card.is-reply-post::before {
+    content: '';
+    position: absolute;
+    left: -14px;
+    top: -6px;
+    bottom: -6px;
+    width: 2px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0.02)); /* faint vertical connector */
 }
 
 .post-card.is-reply-post:hover {
     border-left-color: var(--primary-color);
-    background-color: var(--bg-hover);
+    background-color: rgba(255,255,255,0.75);
+}
+/* Collapsed replies summary */
+.replies-summary {
+    margin-left: 28px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+}
+
+.replies-summary-btn {
+    background: #F5F7FA;
+    border: 1px solid #E3E7EC;
+    color: var(--text-color-secondary);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 0.85em;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+}
+.replies-summary-btn .names { color: var(--text-color-tertiary); margin-left: 6px; }
+.replies-summary.expanded .replies-summary-btn { background: #E9EEF5; border-color: #D7DEE8; }
+.replies-summary-btn .chevron { font-size: 0.9em; color: var(--text-color-tertiary); }
+
+.participants-chips { display: inline-flex; gap: 4px; margin-left: 4px; }
+.participant-chip { width: 18px; height: 18px; border-radius: 50%; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+
+.replies-collapsible { margin-left: 0; }
+
+/* Subtle background stripe behind replies */
+.replies-region {
+    position: relative;
+    background-color: rgba(0,0,0,0.015);
+    background-image: linear-gradient(to right, rgba(0,0,0,0.03), rgba(0,0,0,0));
+    border-top: 1px solid rgba(0,0,0,0.03);
+}
+
+/* Muted, compact styling for reply posts */
+.post-card.is-reply-post .post-header { gap: 8px; margin-bottom: 4px; }
+.post-card.is-reply-post .post-avatar { width: 28px; height: 28px; font-size: 0.9em; }
+.post-card.is-reply-post .author-name { color: var(--text-color-secondary); font-weight: 500; }
+.post-card.is-reply-post .post-timestamp { color: var(--text-color-tertiary); font-size: 0.75em; }
+.post-card.is-reply-post .post-content { margin-left: 32px; margin-bottom: 8px; }
+.post-card.is-reply-post .post-content p { -webkit-line-clamp: 3; color: var(--text-color-secondary); }
+/* tighter reply rhythm */
+.post-card.is-reply-post .post-content p { line-height: 1.45; }
+.post-card.is-reply-post + .post-card.is-reply-post { margin-top: 6px; }
+.post-card.is-reply-post .post-footer { margin-left: 32px; opacity: 0.85; gap: 8px; }
+.post-card.is-reply-post:hover .post-footer { opacity: 1; }
+.post-card.is-reply-post .post-actions .action-btn { padding: 4px 8px; font-size: 0.8em; }
+.post-card.is-reply-post .post-status-select { padding: 4px 8px; font-size: 0.8em; }
+
+/* More visible indentation guide for replies */
+.post-card.is-reply-post::before {
+    left: -14px;
+    width: 2px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0.02));
+}
+
+/* Hide reply actions until hover for ultra-clean threads */
+.post-card.is-reply-post .post-actions,
+.post-card.is-reply-post .post-status-selector-container {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+}
+.post-card.is-reply-post:hover .post-actions,
+.post-card.is-reply-post:hover .post-status-selector-container {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 /* Unread email styling - subtle indicator */
@@ -474,8 +599,8 @@ img {
 
 /* Avatar styling */
 .post-avatar {
-    width: 40px; /* Restored original size */
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     background-color: var(--primary-color);
     color: white;
@@ -510,6 +635,14 @@ img {
 .author-name:hover {
     color: var(--link-color);
     text-decoration: underline;
+}
+
+/* Recipient line subtle and muted */
+.recipient-separator,
+.recipient-name {
+    color: var(--text-color-tertiary);
+    font-weight: 400;
+    font-size: 0.9em;
 }
 
 /* Timestamp styling */
@@ -554,16 +687,33 @@ img {
 .post-content-subject {
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 8px; /* Restored original margin */
-    font-size: 1em; /* Restored original font size */
+    margin-bottom: 10px;
+    font-size: 1.15em; /* Elevate subject prominence */
 }
 
 .post-content p {
     margin: 0;
     color: var(--text-secondary);
     line-height: 1.5;
-    font-size: 0.95em; /* Restored original font size */
+    font-size: 1em;
+    display: -webkit-box;
+    -webkit-line-clamp: 5; /* More context for parent */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
+
+/* Expand/collapse for clamped content */
+.post-content .expand-toggle {
+    margin-top: 6px;
+    background: transparent;
+    border: none;
+    color: var(--link-color);
+    font-size: 0.85em;
+    padding: 0;
+    cursor: pointer;
+}
+.post-card.is-reply-post .post-content .expand-toggle { font-size: 0.8em; }
+.post-content.expanded p { -webkit-line-clamp: unset; display: block; }
 
 /* Post footer with actions and status */
 .post-footer {
@@ -673,17 +823,11 @@ button:disabled, input:disabled {
     outline: none;
 }
 
-#left-sidebar h2, #left-sidebar h3 { /* Changed from #groups-sidebar */
-    color: var(--text-color-primary);
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #DEE2E6; 
-    font-size: 1.05em; /* Slightly toned down */
-    font-weight: 500; /* Slightly toned down */
-}
-#left-sidebar h3 { /* Changed from #groups-sidebar */
-    font-size: 0.95em; /* Toned down */
-}
+#left-sidebar h2, #left-sidebar h3 { color: var(--text-color-secondary); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #EDF0F2; font-size: 1em; font-weight: 500; }
+#left-sidebar h3 { font-size: 0.9em; }
+#left-sidebar h2 { display: flex; align-items: center; justify-content: space-between; }
+#left-sidebar .icon-btn { background: #EEF2F7; color: var(--text-color-secondary); border: 1px solid #E0E6EE; border-radius: 6px; padding: 2px 8px; font-size: 0.9em; cursor: pointer; }
+#left-sidebar .icon-btn:hover { background: #E7ECF4; }
 
 /* Minimalist Sidebar Create Group Button */
 #create-group-btn {
@@ -699,24 +843,8 @@ button:disabled, input:disabled {
 }
 
 
-.group-item {
-    padding: 8px 12px; /* Reduced padding */
-    margin-bottom: 6px; /* Reduced margin */
-    background-color: var(--main-content-bg); /* Use main content background */
-    border: 1px solid var(--card-border-color);
-    border-radius: var(--border-radius-sm); /* Reduced border radius */
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: all 0.2s ease-in-out;
-    position: relative;
-    font-size: 0.9em; /* Smaller font size */
-}
-.group-item:hover {
-    background-color: #E9ECEF;
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
-}
+.group-item { padding: 6px 10px; margin-bottom: 6px; background-color: #FFFFFF; border: 1px solid #ECEFF1; border-radius: var(--border-radius-sm); display: flex; justify-content: space-between; align-items: center; transition: all 0.2s ease-in-out; position: relative; font-size: 0.9em; }
+.group-item:hover { background-color: #F7F8FA; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
 .group-item span {
     font-weight: 500;
     font-size: 0.95em;
@@ -727,21 +855,14 @@ button:disabled, input:disabled {
     display: flex;
     gap: 8px;
     align-items: center;
+    opacity: 0.0;
+    transition: opacity 0.15s ease;
 }
+.group-item:hover .group-actions { opacity: 1; }
 
 /* Minimalist Sidebar View Group Button */
 .view-group-members-btn,
-.edit-group-btn { 
-    background-color: transparent;
-    color: var(--text-color-secondary);
-    border: 1px solid var(--card-border-color);
-    font-size: 0.75em;
-    padding: 6px 10px;
-    font-weight: 400;
-    border-radius: var(--border-radius-sm);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
+.edit-group-btn { background-color: transparent; color: var(--text-color-tertiary); border: 1px solid #E7EAEE; font-size: 0.75em; padding: 6px 8px; font-weight: 400; border-radius: var(--border-radius-sm); cursor: pointer; transition: all 0.2s ease; }
 .view-group-members-btn:hover,
 .edit-group-btn:hover {
     background-color: var(--link-color);
@@ -1384,29 +1505,20 @@ select#status-feed-filter:focus, select#group-feed-filter:focus {
     max-height: 100vh;
 }
 
-#right-sidebar h2 {
-    margin-bottom: 20px;
-    color: var(--text-color-primary);
-    font-size: 1.3em;
-    font-weight: 600;
-}
+#right-sidebar h2 { margin-bottom: 12px; color: var(--text-color-secondary); font-size: 1.05em; font-weight: 600; }
 
-.filter-section {
-    margin-bottom: 25px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--post-separator-color);
-}
+.filter-section { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #EDF0F2; }
 
 .filter-section:last-child {
     border-bottom: none;
 }
 
-.filter-section h3 {
-    margin-bottom: 12px;
-    font-size: 1em;
-    font-weight: 600;
-    color: var(--text-color-primary);
-}
+.filter-section h3 { margin-bottom: 8px; font-size: 0.95em; font-weight: 600; color: var(--text-color-secondary); }
+/* Accordion behavior */
+#right-sidebar .filter-section.collapsed > :not(h3) { display: none; }
+#right-sidebar .filter-section h3.accordion-header { cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; }
+#right-sidebar .filter-section h3.accordion-header::after { content: '▾'; color: var(--text-color-tertiary); font-size: 0.9em; }
+#right-sidebar .filter-section.collapsed h3.accordion-header::after { content: '▸'; }
 
 .filter-section h4 {
     margin: 12px 0 8px 0;
@@ -1441,14 +1553,7 @@ select#status-feed-filter:focus, select#group-feed-filter:focus {
     margin-top: 8px;
 }
 
-.filter-options label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.9em;
-    color: var(--text-color-primary);
-    cursor: pointer;
-}
+.filter-options label { display: flex; align-items: center; gap: 8px; font-size: 0.85em; color: var(--text-color-secondary); cursor: pointer; }
 
 .filter-options input[type="checkbox"] {
     margin: 0;
@@ -1456,11 +1561,21 @@ select#status-feed-filter:focus, select#group-feed-filter:focus {
 }
 
 .file-type-filters,
-.size-filters {
-    display: flex;
-    flex-direction: column;
+.size-filters { display: grid; grid-template-columns: repeat(3, max-content); gap: 8px 8px; margin-top: 6px; font-size: 0.85em; color: var(--text-color-secondary); }
+
+/* Chip-like toggles for file types and size */
+.file-type-filters label, .size-filters label {
+    display: inline-flex;
+    align-items: center;
     gap: 6px;
-    margin-top: 8px;
+    padding: 6px 12px;
+    border: 1px solid #E0E6EE;
+    border-radius: 999px;
+    background: #FAFBFE;
+    cursor: pointer;
+}
+.file-type-filters input[type="checkbox"], .size-filters input[type="checkbox"] {
+    accent-color: var(--link-color);
 }
 
 .quick-dates {
@@ -1470,16 +1585,7 @@ select#status-feed-filter:focus, select#group-feed-filter:focus {
     margin-top: 8px;
 }
 
-.quick-date-btn {
-    padding: 6px 12px;
-    font-size: 0.8em;
-    background-color: #F0F2F5;
-    color: var(--text-color-primary);
-    border: 1px solid var(--card-border-color);
-    border-radius: var(--border-radius-sm);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
+.quick-date-btn { padding: 6px 12px; min-height: 36px; font-size: 0.85em; background-color: #F0F2F5; color: var(--text-color-primary); border: 1px solid var(--card-border-color); border-radius: var(--border-radius-sm); cursor: pointer; transition: all 0.2s ease; }
 
 .quick-date-btn:hover {
     background-color: #E4E6EB;
@@ -1492,12 +1598,7 @@ select#status-feed-filter:focus, select#group-feed-filter:focus {
     border-color: var(--link-color);
 }
 
-.filter-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 20px;
-}
+.filter-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 
 .primary-btn,
 .secondary-btn,
@@ -1520,11 +1621,7 @@ select#status-feed-filter:focus, select#group-feed-filter:focus {
     background-color: var(--link-color-hover);
 }
 
-.secondary-btn {
-    background-color: #F0F2F5;
-    color: var(--text-color-primary);
-    border: 1px solid var(--card-border-color);
-}
+.secondary-btn { background-color: #F7F8FA; color: var(--text-color-secondary); border: 1px solid #E7EAEE; }
 
 .secondary-btn:hover {
     background-color: #E4E6EB;
@@ -1785,6 +1882,27 @@ select#status-feed-filter:focus, select#group-feed-filter:focus {
     font-size: 0.85em;
     margin-bottom: 1rem;
 }
+
+/* Active filter bar below feed header */
+.active-filters-bar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+}
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #EEF4FF;
+    color: #2B4C7E;
+    border: 1px solid #D8E3FF;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.85em;
+    min-height: 36px;
+}
+.filter-chip button { background: transparent; border: none; color: inherit; cursor: pointer; }
 
 /* Search highlighting */
 mark {
