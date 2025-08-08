@@ -782,8 +782,9 @@ const searchBtn = document.getElementById('search-btn');
 const notificationsBtn = document.getElementById('notifications-btn');
 const groupsBtn = document.getElementById('groups-btn');
 const profileBtn = document.getElementById('profile-btn');
-const compactToggleBtn = document.getElementById('toggle-compact-mode-btn');
-const readingToggleBtn = document.getElementById('toggle-reading-mode-btn');
+// Compact/Reading mode toggles removed to reduce header clutter
+const compactToggleBtn = null;
+const readingToggleBtn = null;
 
 // Search functionality
 if (searchBtn && searchField) {
@@ -826,23 +827,7 @@ if (profileBtn) {
     });
 }
 
-// Compact mode toggle
-if (compactToggleBtn) {
-    compactToggleBtn.addEventListener('click', () => {
-        document.body.classList.toggle('compact-mode');
-        const pressed = document.body.classList.contains('compact-mode');
-        compactToggleBtn.setAttribute('aria-pressed', String(pressed));
-    });
-}
-
-// Reading mode toggle
-if (readingToggleBtn) {
-    readingToggleBtn.addEventListener('click', () => {
-        document.body.classList.toggle('reading-mode');
-        const pressed = document.body.classList.contains('reading-mode');
-        readingToggleBtn.setAttribute('aria-pressed', String(pressed));
-    });
-}
+// Compact/Reading toggles removed
 
 // Add profile edit button to header if it doesn't exist
 function addProfileEditButton() {

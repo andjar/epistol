@@ -53,13 +53,6 @@
         </svg>
         <span>New Email</span>
     </button>
-    <button id="toggle-compact-mode-btn" class="nav-link" title="Toggle compact mode" aria-pressed="false">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v2H3zM3 11h12v2H3zM3 17h18v2H3z"/></svg>
-        <span>Compact</span>
-    </button>
-    <button id="toggle-reading-mode-btn" class="nav-link" title="Toggle reading mode" aria-pressed="false">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v12H4z"/><path d="M8 6v12"/></svg>
-        <span>Reading</span>
-    </button>
+    <!-- Compact/Reading mode toggles removed to reduce header clutter -->
     <button id="toggle-right-sidebar-btn" class="sidebar-toggle-btn">☰</button>
 </header>

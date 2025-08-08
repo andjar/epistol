@@ -482,7 +482,7 @@ body.reading-mode .main-container { padding-top: 60px; }
     border-left: 3px solid var(--border-color);
     background-color: rgba(255,255,255,0.6); /* More transparent than parent */
     font-size: 0.9em; /* Smaller text for replies */
-    padding: 6px 10px; /* Further reduced padding for replies */
+    padding: 4px 8px; /* Compact padding for replies */
     margin-top: 2px;
     margin-bottom: 2px;
     border-radius: 0 8px 8px 0; /* Rounded right corners only */
@@ -545,16 +545,18 @@ body.reading-mode .main-container { padding-top: 60px; }
 }
 
 /* Muted, compact styling for reply posts */
-.post-card.is-reply-post .post-header { gap: 8px; margin-bottom: 4px; }
+.post-card.is-reply-post .post-header { gap: 6px; margin-bottom: 2px; }
 .post-card.is-reply-post .post-avatar { width: 28px; height: 28px; font-size: 0.9em; }
 .post-card.is-reply-post .author-name { color: var(--text-color-secondary); font-weight: 500; }
 .post-card.is-reply-post .post-timestamp { color: var(--text-color-tertiary); font-size: 0.75em; }
-.post-card.is-reply-post .post-content { margin-left: 32px; margin-bottom: 8px; }
-.post-card.is-reply-post .post-content p { -webkit-line-clamp: 3; color: var(--text-color-secondary); }
+.post-card.is-reply-post .post-timestamp { opacity: 0.85; transition: opacity .15s ease; }
+.post-card.is-reply-post:hover .post-timestamp { opacity: 1; }
+.post-card.is-reply-post .post-content { margin-left: 32px; margin-bottom: 4px; }
+.post-card.is-reply-post .post-content p { -webkit-line-clamp: 2; color: var(--text-color-secondary); margin: 0; }
 /* tighter reply rhythm */
-.post-card.is-reply-post .post-content p { line-height: 1.45; }
-.post-card.is-reply-post + .post-card.is-reply-post { margin-top: 6px; }
-.post-card.is-reply-post .post-footer { margin-left: 32px; opacity: 0.85; gap: 8px; }
+.post-card.is-reply-post .post-content p { line-height: 1.4; }
+.post-card.is-reply-post + .post-card.is-reply-post { margin-top: 4px; }
+.post-card.is-reply-post .post-footer { margin-left: 32px; opacity: 0.85; gap: 6px; margin-top: 2px; }
 .post-card.is-reply-post:hover .post-footer { opacity: 1; }
 .post-card.is-reply-post .post-actions .action-btn { padding: 4px 8px; font-size: 0.8em; }
 .post-card.is-reply-post .post-status-select { padding: 4px 8px; font-size: 0.8em; }
@@ -596,6 +598,11 @@ body.reading-mode .main-container { padding-top: 60px; }
     gap: 12px; /* Restored original gap */
     margin-bottom: 8px; /* Restored original margin */
 }
+
+/* Place timestamp in the upper-right of the header */
+.post-header { position: relative; }
+.post-timestamp { position: absolute; right: 0; top: 0; }
+.post-card.is-reply-post .post-timestamp { right: 8px; top: 0; }
 
 /* Avatar styling */
 .post-avatar {
@@ -759,6 +766,9 @@ body.reading-mode .main-container { padding-top: 60px; }
 .status-icon-btn { background: transparent; border: 1px solid var(--card-border-color); color: var(--text-color-secondary); width: 30px; height: 30px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color .15s ease, border-color .15s ease, color .15s ease; }
 .status-icon-btn:hover { background: var(--bg-hover); border-color: var(--border-hover); color: var(--text-color-primary); }
 .status-icon-btn.active { color: var(--link-color); border-color: var(--link-color); background: rgba(0,122,255,0.06); }
+/* Make status controls smaller inside replies for tighter rhythm */
+.post-card.is-reply-post .status-icon-btn { width: 26px; height: 26px; }
+.post-card.is-reply-post .status-icon-btn svg { width: 16px; height: 16px; }
 /* Ensure SVG icons inside the circular buttons render with fixed size */
 .status-icon-btn svg { width: 18px; height: 18px; display: block; flex-shrink: 0; }
 
@@ -870,7 +880,7 @@ button:disabled, input:disabled {
     display: flex;
     gap: 8px;
     align-items: center;
-    opacity: 0.0;
+    opacity: 0;
     transition: opacity 0.15s ease;
 }
 .group-item:hover .group-actions { opacity: 1; }
@@ -1422,77 +1432,27 @@ select#status-feed-filter:focus, select#group-feed-filter:focus {
 }
 
 /* === Email Attachments Styles === */
-.email-attachments {
-    margin-top: 15px;
-    padding: 15px;
-    background-color: #f8f9fa;
-    border-radius: var(--border-radius-sm);
-    border: 1px solid #e9ecef;
-}
+.email-attachments { margin-top: 10px; padding: 10px 12px; background-color: #FAFBFD; border-radius: var(--border-radius-sm); border: 1px dashed #E6EAF0; }
 
-.email-attachments h5 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    color: var(--text-color-primary);
-    font-size: 0.95em;
-    font-weight: 600;
-}
+.email-attachments h5 { margin-top: 0; margin-bottom: 6px; color: var(--text-color-secondary); font-size: 0.9em; font-weight: 500; }
 
-.attachment-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
+.attachment-list { display: flex; flex-direction: column; gap: 6px; }
 
-.attachment-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    background-color: white;
-    border: 1px solid #dee2e6;
-    border-radius: var(--border-radius-sm);
-    transition: background-color 0.2s ease;
-}
+.attachment-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background-color: transparent; border: 1px dashed #E6EAF0; border-radius: var(--border-radius-sm); transition: background-color 0.2s ease, border-color 0.2s ease; }
 
-.attachment-item:hover {
-    background-color: #f8f9fa;
-}
+.attachment-item:hover { background-color: #F5F7FB; border-color: #DCE3ED; }
 
 .attachment-icon {
     font-size: 1.2em;
     color: var(--text-color-secondary);
 }
 
-.attachment-name {
-    flex: 1;
-    font-weight: 500;
-    color: var(--text-color-primary);
-    font-size: 0.9em;
-    word-break: break-word;
-}
+.attachment-name { flex: 1; font-weight: 500; color: var(--text-color-secondary); font-size: 0.85em; word-break: break-word; }
 
-.attachment-size {
-    color: var(--text-color-secondary);
-    font-size: 0.8em;
-    white-space: nowrap;
-}
+.attachment-size { color: var(--text-color-tertiary); font-size: 0.75em; white-space: nowrap; }
 
-.attachment-download-btn {
-    background-color: var(--link-color);
-    color: white;
-    border: none;
-    padding: 4px 8px;
-    border-radius: var(--border-radius-sm);
-    cursor: pointer;
-    font-size: 0.8em;
-    transition: background-color 0.2s ease;
-    white-space: nowrap;
-}
-
-.attachment-download-btn:hover {
-    background-color: var(--link-color-hover);
-}
+.attachment-download-btn { background: transparent; color: var(--link-color); border: 1px solid var(--link-color); padding: 3px 8px; border-radius: var(--border-radius-sm); cursor: pointer; font-size: 0.75em; white-space: nowrap; transition: color .15s ease, background-color .15s ease, border-color .15s ease; }
+.attachment-download-btn:hover { background-color: var(--link-color); color: #fff; border-color: var(--link-color); }
 
 /* Responsive adjustments for attachments */
 @media (max-width: 768px) {
@@ -1904,6 +1864,11 @@ select#status-feed-filter:focus, select#group-feed-filter:focus {
     gap: 6px;
     flex-wrap: wrap;
     padding: 8px 12px;
+    position: sticky;
+    top: 60px;
+    background: #fff;
+    border-bottom: 1px solid var(--card-border-color);
+    z-index: 9;
 }
 .filter-chip {
     display: inline-flex;
